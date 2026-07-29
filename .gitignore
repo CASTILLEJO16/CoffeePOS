@@ -1,0 +1,60 @@
+# Root ignores
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Electron build artifacts
+release/
+dist_electron/
+*.exe
+*.msi
+*.AppImage
+*.dmg
+*.zip
+*.blockmap
+latest.yml
+
+# Client (Vite)
+client/node_modules/
+client/dist/
+
+# Server
+server/node_modules/
+server/uploads/
+server/database/*.db
+server/database/*.sqlite
+
+# Logs
+logs/
+*.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+ehthumbs.db
+Desktop.ini
+
+# Temporary
+tmp/
+temp/
