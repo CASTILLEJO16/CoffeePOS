@@ -5,8 +5,17 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Carpeta destino de uploads
-const uploadDir = path.join(__dirname, '../../uploads');
+// Use Electron userData for uploads in production to avoid ASAR issues
+const userDataPath = process.env.ELECTRON_USER_DATA;
+const uploadDir = userDataPath
+  ? path.join(userDataPath, 'uploads')
+  : path.join(__dirname, '../../uploads');
+
+// Ensure directory exists
+import fs from 'fs';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

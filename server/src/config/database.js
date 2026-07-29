@@ -8,7 +8,12 @@ import { initializeDefaultCustomizations } from '../services/customizationServic
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = path.resolve(__dirname, '../../database', 'coffeepos.db');
+// In Electron/production, store DB in userData to persist across updates
+// Fallback to local path for dev when ELECTRON_USER_DATA is not provided
+const userDataPath = process.env.ELECTRON_USER_DATA;
+const dbPath = userDataPath
+  ? path.join(userDataPath, 'coffeepos.db')
+  : path.resolve(__dirname, '../../database', 'coffeepos.db');
 
 /**
  * Inicializa la conexión a la base de datos SQLite

@@ -63,7 +63,13 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 // Servir imágenes de productos como archivos estáticos
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploads from userData in Electron, fallback to local in dev
+const userDataPath = process.env.ELECTRON_USER_DATA;
+const uploadsPath = userDataPath
+  ? path.join(userDataPath, 'uploads')
+  : path.join(__dirname, '../uploads');
+
+app.use('/uploads', express.static(uploadsPath));
 
 // Rutas API
 app.use('/api/productos', productRoutes);
@@ -90,9 +96,11 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Iniciar servidor
-app.listen(config.port, () => {
-  console.log(`🚀 Servidor Coffee POS corriendo en puerto ${config.port}`);
-  console.log(`📡 API disponible en http://localhost:${config.port}`);
+const PORT = process.env.PORT || config.port;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor Coffee POS corriendo en puerto ${PORT}`);
+  console.log(`📡 API disponible en http://localhost:${PORT}`);
   if (process.env.NODE_ENV !== 'production') {
     console.log(`🔑 Usuario admin por defecto: admin / admin123`);
   }

@@ -1,0 +1,17 @@
+{
+  "name": "coffe-pos-electron",
+  "version": "1.0.0",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "concurrently \"npm --prefix ../server run dev\" \"npm --prefix ../client run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.2.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}
