@@ -31,7 +31,15 @@ const app = express();
 app.use(helmet({
   crossOriginResourcePolicy: false
 }));
-app.use(cors({ origin: ['http://localhost:5173'], credentials: true }));
+// Allow Electron (file://) and localhost dev
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // Electron / file://
+    if (origin.includes('localhost')) return callback(null, true);
+    return callback(null, true);
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(requestLogger);

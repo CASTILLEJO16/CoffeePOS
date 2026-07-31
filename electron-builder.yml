@@ -1,0 +1,23 @@
+appId: com.coffeepos.app
+productName: CoffeePOS
+directories:
+  output: release
+files:
+  - electron/**/*
+  - client/dist/**/*
+  - server/**/*
+  - package.json
+extraMetadata:
+  main: electron/main.js
+win:
+  target: nsis
+nsis:
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false
+publish:
+  provider: github
+  owner: CASTILLEJO16
+  repo: CoffeePOS
+  releaseType: release
+generateUpdatesFilesForAllChannels: true

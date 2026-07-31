@@ -17,6 +17,7 @@ import OrderSummary from '../components/pos/OrderSummary.jsx';
 import Modal from '../components/common/Modal.jsx';
 import Toast from '../components/common/Toast.jsx';
 import ProductCustomizationModal from '../components/pos/ProductCustomizationModal.jsx';
+import CashPaymentModal from '../components/pos/CashPaymentModal.jsx';
 import { useToast } from '../hooks/useToast.js';
 import Swal from 'sweetalert2';
 import './POS.css';
@@ -32,6 +33,7 @@ export default function POS() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCashModal, setShowCashModal] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
@@ -171,6 +173,12 @@ export default function POS() {
     try {
       if (processing) return;
 
+      if (method === 'efectivo') {
+        setShowPaymentModal(false);
+        setShowCashModal(true);
+        return;
+      }
+
       if (!cashRegister) {
         showToast('Debes abrir una caja antes de vender', 'error');
         return;
@@ -212,6 +220,46 @@ export default function POS() {
       clearOrder();
       setShowPaymentModal(false);
       
+      Swal.fire({
+        title: '¡Venta Exitosa!',
+        text: 'La venta se ha procesado correctamente.',
+        icon: 'success',
+        confirmButtonText: 'Aceptar',
+        timer: 3000,
+        timerProgressBar: true
+      });
+    } catch (error) {
+      console.error('Error al procesar venta:', error);
+      showToast(error.message || 'Error al procesar la venta', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handleCashConfirm({ recibido, cambio }) {
+    try {
+      if (processing) return;
+      setProcessing(true);
+
+      const saleData = {
+        items: items.map(item => ({
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          personalizaciones: item.personalizaciones,
+          precio_final: item.precio_final
+        })),
+        metodo_pago: 'efectivo',
+        monto_recibido: recibido,
+        cambio,
+        iva_rate: localStorage.getItem('iva_rate')
+      };
+
+      const sale = await createSale(saleData);
+      window.dispatchEvent(new Event('saleCreated'));
+      printTicket(sale);
+      clearOrder();
+      setShowCashModal(false);
+
       Swal.fire({
         title: '¡Venta Exitosa!',
         text: 'La venta se ha procesado correctamente.',
@@ -433,6 +481,13 @@ export default function POS() {
           </button>
         </div>
       </Modal>
+
+      <CashPaymentModal
+        isOpen={showCashModal}
+        onClose={() => setShowCashModal(false)}
+        total={total}
+        onConfirm={handleCashConfirm}
+      />
 
       {toast && (
         <Toast

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { OrderProvider } from './context/OrderContext.jsx';
 import { AdminOrderProvider } from './context/AdminOrderContext.jsx';
@@ -22,6 +22,7 @@ import CashRegisterCheck from './components/CashRegisterCheck.jsx';
 import MainLayout from './layouts/MainLayout.jsx';
 import AdminLayout from './layouts/AdminLayout.jsx';
 import './styles/global.css';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 function ProtectedRoute({ children, allowAdmin = false }) {
   const { isAuthenticated, loading, user } = useAuth();
@@ -61,11 +62,14 @@ function AdminRoute({ children }) {
 }
 
 function App() {
+  const isElectron = typeof window !== 'undefined' && window.location.protocol === 'file:';
+  const Router = isElectron ? HashRouter : BrowserRouter;
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
+        <ErrorBoundary>
+          <Router>
+            <Routes>
             <Route path="/login" element={<Login />} />
 
             {/* Ruta de apertura de caja (SIN CashRegisterCheck) */}
@@ -130,8 +134,9 @@ function App() {
               <Route path="cortes-caja" element={<CortesCaja />} />
               <Route path="configuracion" element={<Configuracion />} />
             </Route>
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </Router>
+        </ErrorBoundary>
       </AuthProvider>
     </ThemeProvider>
   );

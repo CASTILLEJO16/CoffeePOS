@@ -1,4 +1,9 @@
-export const API_BASE_URL = '/api';
+// In Electron production, there is no dev proxy, so use absolute URL
+const isElectron = typeof window !== 'undefined' && window.location.protocol === 'file:';
+
+export const API_BASE_URL = isElectron
+  ? 'http://localhost:3000/api'
+  : '/api';
 
 export const DEFAULT_CATEGORIES = [
   'Todas',

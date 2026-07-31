@@ -27,7 +27,8 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     loading,
-    isAuthenticated: isAuthenticated(),
+    // derive auth from current state to avoid stale token issues
+    isAuthenticated: !!user,
     login,
     logout
   };

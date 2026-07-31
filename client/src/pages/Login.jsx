@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Coffee, User, Lock, Sun, Moon } from 'lucide-react';
 import { login, saveToken, saveUser } from '../services/authService.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { clearAuth } from '../services/authService.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 import Input from '../components/common/Input.jsx';
 import Button from '../components/common/Button.jsx';
@@ -31,6 +32,8 @@ export default function Login() {
       const rol = response.user?.rol || response.user?.role;
       navigate(rol === 'admin' ? '/admin' : '/');
     } catch (err) {
+      // Ensure no stale session remains after failed login
+      clearAuth();
       setError('Usuario o contraseña incorrectos');
     } finally {
       setLoading(false);
