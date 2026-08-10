@@ -44,6 +44,7 @@ import {
   countSaleProducts,
   normalizePaymentMethod,
   PAYMENT_LABELS,
+  formatPaymentMethod,
   getPeriodRanges
 } from '../utils/salesAnalytics.js';
 import SalesBarChart from '../components/ventas/SalesBarChart.jsx';
@@ -80,23 +81,23 @@ function getPersonalizacionText(personalizaciones) {
 
 function GrowthBadge({ growth, label }) {
   if (growth === null || growth === undefined) {
-    return <span className="growth-badge neutral"><Minus size={12} /> {label}</span>;
+    return <span className="growth-badge neutral"><Minus size={12} /></span>;
   }
   if (growth > 0) {
     return (
       <span className="growth-badge up">
-        <TrendingUp size={12} /> +{growth.toFixed(1)}% {label}
+        <TrendingUp size={12} /> +{Math.round(growth)}%
       </span>
     );
   }
   if (growth < 0) {
     return (
       <span className="growth-badge down">
-        <TrendingDown size={12} /> {growth.toFixed(1)}% {label}
+        <TrendingDown size={12} /> {Math.round(growth)}%
       </span>
     );
   }
-  return <span className="growth-badge neutral"><Minus size={12} /> 0% {label}</span>;
+  return <span className="growth-badge neutral"><Minus size={12} /> 0%</span>;
 }
 
 function KpiCard({ icon: Icon, title, value, description, growth, label, loading }) {
@@ -484,7 +485,7 @@ export default function VentasVendedor() {
   ];
 
   return (
-    <div className="mis-ventas-page">
+    <div className="admin-page mis-ventas-page">
       <header className="mv-header">
         <div>
           <div className="mv-title-row">
@@ -694,7 +695,7 @@ export default function VentasVendedor() {
               <div className="last-sale-main">
                 <span className="last-sale-folio">#{lastSale.id}</span>
                 <span className={`payment-chip ${normalizePaymentMethod(lastSale.metodo_pago)}`}>
-                  {PAYMENT_LABELS[normalizePaymentMethod(lastSale.metodo_pago)]}
+                  {formatPaymentMethod(lastSale.metodo_pago, lastSale.tipo_tarjeta)}
                 </span>
               </div>
               <div className="last-sale-grid">
@@ -889,7 +890,7 @@ export default function VentasVendedor() {
                     <td data-label="Productos">{countSaleProducts(venta)}</td>
                     <td data-label="Método">
                       <span className={`payment-chip ${normalizePaymentMethod(venta.metodo_pago)}`}>
-                        {PAYMENT_LABELS[normalizePaymentMethod(venta.metodo_pago)]}
+                        {formatPaymentMethod(venta.metodo_pago, venta.tipo_tarjeta)}
                       </span>
                     </td>
                     <td data-label="Total" className="total-cell">{formatCurrency(venta.total)}</td>

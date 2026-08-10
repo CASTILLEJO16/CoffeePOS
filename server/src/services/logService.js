@@ -1,4 +1,5 @@
 import { query, run } from '../config/database.js';
+import { nowInTijuanaSQL } from '../utils/dateTime.js';
 
 /**
  * Servicio de Logs
@@ -13,9 +14,10 @@ import { query, run } from '../config/database.js';
  */
 export async function logAction(usuarioId, accion, detalles = null) {
   try {
+    const fecha = nowInTijuanaSQL();
     await run(
-      'INSERT INTO logs (usuario_id, accion, detalles) VALUES (?, ?, ?)',
-      [usuarioId, accion, detalles]
+      'INSERT INTO logs (usuario_id, accion, detalles, fecha) VALUES (?, ?, ?, ?)',
+      [usuarioId, accion, detalles, fecha]
     );
   } catch (error) {
     console.error('Error al registrar log:', error);

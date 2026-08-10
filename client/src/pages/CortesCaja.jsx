@@ -165,7 +165,7 @@ export default function CortesCaja() {
   }
 
   return (
-    <div className="cortes-caja-page">
+    <div className="admin-page cortes-caja-page">
       <div className="cortes-caja-container">
         <div className="cortes-header">
           <div className="header-left">

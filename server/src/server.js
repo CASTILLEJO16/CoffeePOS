@@ -46,23 +46,6 @@ app.use(requestLogger);
 // Attach branch (multi-sucursal fase 1)
 app.use(attachBranch);
 
-// Ensure DB schema (lightweight migration)
-async function ensureSchema() {
-  try {
-    await run(`ALTER TABLE ventas ADD COLUMN cancelada INTEGER DEFAULT 0`);
-  } catch (e) {
-    // ignore if already exists
-  }
-  try {
-    await run(`ALTER TABLE ventas ADD COLUMN branch_id INTEGER DEFAULT 1`);
-  } catch (e) {}
-  try {
-    await run(`ALTER TABLE cajas ADD COLUMN branch_id INTEGER DEFAULT 1`);
-  } catch (e) {}
-}
-
-ensureSchema();
-
 // Rate limit global para API
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

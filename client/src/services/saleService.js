@@ -69,3 +69,27 @@ export async function getDailySummary(date) {
   const response = await api.get(`/ventas/resumen?date=${date}`);
   return response.data.data;
 }
+
+/**
+ * Obtiene KPIs de ventas con filtros
+ */
+export async function getSalesKPIs(period = 'day', startDate = null, endDate = null, year = null) {
+  const queryParams = new URLSearchParams({
+    period,
+    _t: Date.now(),
+    _r: Math.random().toString(36).substring(7)
+  });
+  
+  if (startDate) queryParams.append('startDate', startDate);
+  if (endDate) queryParams.append('endDate', endDate);
+  if (year) queryParams.append('year', year);
+  
+  const response = await api.get(`/ventas/kpis?${queryParams.toString()}`, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
+  return response.data.data;
+}

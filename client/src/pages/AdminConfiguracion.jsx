@@ -214,7 +214,7 @@ export default function AdminConfiguracion() {
                       <button
                         className="primary-btn"
                         style={{ marginLeft: '10px', padding: '4px 8px', fontSize: '12px' }}
-                        onClick={() => window.location.href = `/cierre-caja/${caja.id}`}
+                        onClick={() => navigate(`/cierre-caja/${caja.id}`)}
                       >
                         Cerrar
                       </button>

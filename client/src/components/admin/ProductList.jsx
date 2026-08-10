@@ -6,7 +6,7 @@ import Modal from '../common/Modal.jsx';
 import Button from '../common/Button.jsx';
 import './ProductList.css';
 
-const SERVER_URL = 'http://localhost:3001';
+const SERVER_URL = 'http://localhost:3000';
 
 function getImageSrc(imagen) {
   if (!imagen) return null;

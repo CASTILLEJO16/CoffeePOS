@@ -15,8 +15,23 @@ export const PAYMENT_LABELS = {
   efectivo: 'Efectivo',
   tarjeta: 'Tarjeta',
   transferencia: 'Transferencia',
+  usd: 'USD',
   otros: 'Otros'
 };
+
+/**
+ * Formatea el método de pago incluyendo el tipo de tarjeta si existe
+ */
+export function formatPaymentMethod(metodo, tipoTarjeta) {
+  let label = PAYMENT_LABELS[normalizePaymentMethod(metodo)] || metodo;
+  
+  if (metodo === 'tarjeta' && tipoTarjeta) {
+    const tipo = tipoTarjeta.charAt(0).toUpperCase() + tipoTarjeta.slice(1);
+    label += ` (${tipo})`;
+  }
+  
+  return label;
+}
 
 /**
  * Extrae YYYY-MM-DD de una fecha de venta
@@ -121,10 +136,15 @@ export function computeSellerKpis(sales) {
   const productosHoy = todaySales.reduce((sum, s) => sum + countSaleProducts(s), 0);
   const promedio = ticketsHoy > 0 ? todayTotal / ticketsHoy : 0;
 
-  const byMethod = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0 };
+  const byMethod = { efectivo: 0, tarjeta: 0, tarjeta_credito: 0, tarjeta_debito: 0, transferencia: 0, otros: 0 };
   for (const sale of todaySales) {
     const key = normalizePaymentMethod(sale.metodo_pago);
     byMethod[key] += Number(sale.total) || 0;
+    
+    // Separar tarjeta por tipo
+    if (sale.metodo_pago === 'tarjeta' && sale.tipo_tarjeta) {
+      byMethod[`tarjeta_${sale.tipo_tarjeta}`] += Number(sale.total) || 0;
+    }
   }
 
   return {
@@ -221,17 +241,66 @@ export function buildSalesChartSeries(sales, mode) {
  */
 export function buildPaymentBreakdown(sales) {
   const totals = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0 };
+  const tarjetaTipos = {}; // Para separar crédito y débito
+  
   for (const sale of sales) {
-    totals[normalizePaymentMethod(sale.metodo_pago)] += Number(sale.total) || 0;
+    const metodo = normalizePaymentMethod(sale.metodo_pago);
+    totals[metodo] += Number(sale.total) || 0;
+    
+    // Si es tarjeta, separar por tipo
+    if (sale.metodo_pago === 'tarjeta' && sale.tipo_tarjeta) {
+      const tipoKey = `tarjeta_${sale.tipo_tarjeta}`;
+      if (!tarjetaTipos[tipoKey]) {
+        tarjetaTipos[tipoKey] = 0;
+      }
+      tarjetaTipos[tipoKey] += Number(sale.total) || 0;
+    }
   }
-  const grand = Object.values(totals).reduce((a, b) => a + b, 0);
+  
+  // Si hay tipos de tarjeta separados, usarlos en lugar del total general de tarjeta
+  const breakdown = [];
+  let grand = 0;
+  
+  Object.entries(totals).forEach(([key, amount]) => {
+    if (key === 'tarjeta') {
+      // Si hay tipos específicos, agregarlos en lugar del total general
+      if (Object.keys(tarjetaTipos).length > 0) {
+        Object.entries(tarjetaTipos).forEach(([tipoKey, tipoAmount]) => {
+          const tipo = tipoKey.replace('tarjeta_', '');
+          breakdown.push({
+            key: tipoKey,
+            label: `Tarjeta (${tipo.charAt(0).toUpperCase() + tipo.slice(1)})`,
+            amount: tipoAmount,
+            percent: 0 // Se calculará después
+          });
+          grand += tipoAmount;
+        });
+      } else {
+        breakdown.push({
+          key,
+          label: PAYMENT_LABELS[key],
+          amount,
+          percent: 0
+        });
+        grand += amount;
+      }
+    } else {
+      breakdown.push({
+        key,
+        label: PAYMENT_LABELS[key],
+        amount,
+        percent: 0
+      });
+      grand += amount;
+    }
+  });
+  
+  // Calcular porcentajes
+  breakdown.forEach(item => {
+    item.percent = grand > 0 ? (item.amount / grand) * 100 : 0;
+  });
 
-  return Object.entries(totals).map(([key, amount]) => ({
-    key,
-    label: PAYMENT_LABELS[key],
-    amount,
-    percent: grand > 0 ? (amount / grand) * 100 : 0
-  }));
+  return breakdown;
 }
 
 /**

@@ -127,6 +127,10 @@ export async function updateProduct(req, res) {
     // Si se subió una nueva imagen, usar la ruta del archivo
     if (req.file) {
       productData.imagen = `/uploads/${req.file.filename}`;
+    } else {
+      // Si no se subió imagen nueva, eliminar el campo imagen de productData
+      // para que el backend mantenga la imagen existente
+      delete productData.imagen;
     }
 
     const product = await productService.updateProduct(id, productData, userId);

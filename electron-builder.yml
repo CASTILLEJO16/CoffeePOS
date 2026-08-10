@@ -2,6 +2,7 @@ appId: com.coffeepos.app
 productName: CoffeePOS
 directories:
   output: release
+  buildResources: build
 files:
   - electron/**/*
   - client/dist/**/*
@@ -9,15 +10,37 @@ files:
   - package.json
 extraMetadata:
   main: electron/main.js
+  version: 1.0.9
 win:
   target: nsis
+  icon: build/icon.ico
 nsis:
-  oneClick: true
+  oneClick: false
   perMachine: false
-  allowToChangeInstallationDirectory: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: CoffeePOS
+  # Importante: Esto asegura que los datos del usuario se mantengan al actualizar
+  # La carpeta userData de Electron (donde está la BD) no se borra al actualizar
+  deleteAppDataOnUninstall: false
 publish:
   provider: github
   owner: CASTILLEJO16
   repo: CoffeePOS
   releaseType: release
 generateUpdatesFilesForAllChannels: true
+# Configuración para proteger datos del usuario durante actualizaciones
+asar: true
+asarUnpack:
+  - server/node_modules/sqlite3/**/*
+  - server/node_modules/better-sqlite3/**/*
+# Asegurar que la base de datos y configuraciones se mantengan
+# Electron usa app.getPath('userData') que es:
+# Windows: %APPDATA%/CoffeePOS
+# Esta carpeta NO se borra al actualizar
+extraResources:
+  - from: server
+    to: server
+  - from: client/dist
+    to: client/dist

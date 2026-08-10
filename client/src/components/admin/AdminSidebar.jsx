@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
-import { ShoppingCart, Package, Settings, Users, DollarSign, LogOut, Coffee, Sun, Moon, Wallet } from 'lucide-react';
+import { ShoppingCart, Package, Settings, Users, DollarSign, LogOut, Coffee, Sun, Moon, Wallet, BarChart3 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import './AdminSidebar.css';
 
@@ -12,6 +12,7 @@ const menuItems = [
   { path: '/admin/personalizaciones',icon: Settings, label: 'Personalizaciones' },
   { path: '/admin/usuarios',         icon: Users, label: 'Usuarios' },
   { path: '/admin/ventas',           icon: DollarSign, label: 'Ventas' },
+  { path: '/admin/kpis',             icon: BarChart3, label: 'KPIs de Ventas' },
   { path: '/admin/almacen',          icon: Package, label: 'Almacén' },
   { path: '/admin/cortes-caja',      icon: Wallet, label: 'Cortes de Caja' },
   { path: '/admin/configuracion',    icon: Settings, label: 'Configuración' },

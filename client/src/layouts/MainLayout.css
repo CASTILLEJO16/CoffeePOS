@@ -183,6 +183,12 @@
   transition: var(--transition-theme);
 }
 
+.main-content > * {
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 @media (max-width: 900px) {
   .user-name,
   .nav-label {

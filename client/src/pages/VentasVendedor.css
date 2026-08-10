@@ -2,11 +2,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-6);
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
   color: var(--color-text);
   animation: fadeIn var(--transition-base) ease-out;
+}
+
+/* Cuando está dentro de admin-page, no duplicar padding */
+.admin-page.mis-ventas-page {
+  padding: 0;
 }
 
 .mv-header {
@@ -123,8 +126,8 @@
 /* KPIs */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
 }
 
 .kpi-card {
@@ -137,6 +140,7 @@
     transform var(--transition-base),
     box-shadow var(--transition-base),
     border-color var(--transition-base);
+  overflow: hidden; /* prevent content overflow */
 }
 
 .kpi-card:hover {
@@ -169,6 +173,9 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kpi-value {
@@ -177,12 +184,15 @@
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   letter-spacing: -0.02em;
+  word-break: break-word;
 }
 
 .kpi-desc {
   margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .growth-badge {
@@ -194,6 +204,25 @@
   padding: 3px 6px;
   border-radius: var(--border-radius-full);
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* make KPI cleaner */
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.kpi-value {
+  font-size: 22px;
+}
+
+.kpi-desc {
+  font-size: 11px;
+  opacity: 0.8;
 }
 
 .growth-badge.up {
@@ -214,21 +243,24 @@
 /* Cards */
 .mv-mid-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--spacing-5);
 }
 
 .mv-mid-grid.secondary {
-  grid-template-columns: 1.1fr 0.9fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
 .mv-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-xl);
-  padding: 20px;
+  padding: 18px;
   box-shadow: var(--shadow-sm);
   transition: var(--transition-theme);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .mv-card-header {
@@ -594,8 +626,8 @@
 
 .last-sale-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
   margin-bottom: 12px;
 }
 
@@ -741,7 +773,7 @@
 .mv-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 900px;
+  table-layout: fixed; /* prevent columns from stretching */
 }
 
 .mv-table th,
@@ -751,6 +783,13 @@
   border-bottom: 1px solid var(--color-border);
   font-size: var(--font-size-sm);
   color: var(--color-text);
+}
+
+/* prevent overflow breaking layout */
+.mv-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mv-table th {
@@ -787,12 +826,13 @@
 
 .row-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  justify-content: flex-end;
 }
 
 .row-actions button {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--border-radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -805,6 +845,12 @@
     background-color var(--transition-fast),
     color var(--transition-fast),
     border-color var(--transition-fast);
+}
+
+/* limit wide columns */
+.mv-table td[data-label="Cliente"],
+.mv-table td[data-label="Productos"] {
+  max-width: 140px;
 }
 
 .row-actions button:hover {

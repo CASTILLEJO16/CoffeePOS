@@ -229,7 +229,7 @@ export function generateTicketHTML(sale) {
           </div>
           <div class="ticket-info-row">
             <span>Método:</span>
-            <span>${sale.metodo_pago.toUpperCase()}</span>
+            <span>${sale.metodo_pago.toUpperCase()}${sale.metodo_pago === 'tarjeta' && sale.tipo_tarjeta ? ` (${sale.tipo_tarjeta.toUpperCase()})` : ''}</span>
           </div>
         </div>
         

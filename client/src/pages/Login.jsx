@@ -7,6 +7,7 @@ import { clearAuth } from '../services/authService.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 import Input from '../components/common/Input.jsx';
 import Button from '../components/common/Button.jsx';
+import Swal from 'sweetalert2';
 import './Login.css';
 
 export default function Login() {
@@ -25,16 +26,39 @@ export default function Login() {
 
     try {
       const response = await login(usuario, contraseña);
+
+      // Guard against malformed responses to avoid blank screen crashes
+      if (!response || !response.token || !response.user) {
+        console.warn('[LOGIN] invalid response', response);
+        const msg = 'Usuario o contraseña incorrectos';
+        setError(msg);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de acceso',
+          text: msg,
+          confirmButtonText: 'Intentar de nuevo'
+        });
+        return;
+      }
+
       saveToken(response.token);
       saveUser(response.user);
       authLogin(response);
-      // Redirigir según el rol del usuario
+
       const rol = response.user?.rol || response.user?.role;
       navigate(rol === 'admin' ? '/admin' : '/');
     } catch (err) {
       // Ensure no stale session remains after failed login
       clearAuth();
-      setError('Usuario o contraseña incorrectos');
+      console.error('[LOGIN ERROR]', err);
+      const msg = 'Usuario o contraseña incorrectos';
+      setError(msg);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de acceso',
+        text: msg,
+        confirmButtonText: 'Intentar de nuevo'
+      });
     } finally {
       setLoading(false);
     }

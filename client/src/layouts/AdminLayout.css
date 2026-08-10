@@ -15,4 +15,11 @@
   background: var(--color-background);
   color: var(--color-text);
   transition: var(--transition-theme);
+  padding: 32px;
+}
+
+.admin-main > * {
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }

@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import { initializeDefaultCustomizations } from '../services/customizationService.js';
+import { runMigrations } from './migrations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +24,11 @@ export const db = new sqlite3.Database(dbPath, (err) => {
     console.error('Error al conectar a SQLite:', err.message);
   } else {
     console.log('Conectado a SQLite');
+    db.serialize(() => {
+      db.run('PRAGMA journal_mode = WAL;');
+      db.run('PRAGMA foreign_keys = ON;');
+      db.run('PRAGMA busy_timeout = 5000;');
+    });
     initializeTables();
   }
 });
@@ -229,70 +235,31 @@ function createDefaultAdmin() {
 }
 
 /**
- * Migra la base de datos agregando nuevas columnas si es necesario
+ * Migra la base de datos agregando nuevas columnas si es necesario mediante migraciones estructuradas
  */
-function migrateDatabase() {
-  // Agregar columna personalizaciones a detalle_ventas si no existe
-  db.run(
-    `ALTER TABLE detalle_ventas ADD COLUMN personalizaciones TEXT`,
-    (err) => {
-      if (err) {
-        // La columna ya existe, no es error
-        if (!err.message.includes('duplicate column name')) {
-          console.error('Error al migrar base de datos:', err.message);
-        }
-      } else {
-        console.log('Migración de base de datos completada');
-      }
+async function migrateDatabase() {
+  await runMigrations();
 
-      // Agregar columna caja_id a ventas si no existe
-      db.run(
-        `ALTER TABLE ventas ADD COLUMN caja_id INTEGER`,
-        (err) => {
-          if (err) {
-            if (!err.message.includes('duplicate column name')) {
-              console.error('Error al agregar caja_id a ventas:', err.message);
-            }
-          } else {
-            console.log('Columna caja_id agregada a ventas');
-          }
+  // Inicializar personalizaciones por defecto
+  initializeDefaultCustomizations().catch(err => {
+    console.error('Error al inicializar personalizaciones:', err);
+  });
 
-          // Inicializar personalizaciones por defecto
-          initializeDefaultCustomizations().catch(err => {
-            console.error('Error al inicializar personalizaciones:', err);
-          });
-
-          // Insertar configuración por defecto si no existe
-          db.run(`INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('permitir_stock_negativo', '0')`);
-          
-          // Insertar caja por defecto si no existe ninguna
-          db.get('SELECT COUNT(*) as count FROM cajas_nombres', [], (err, row) => {
-            if (!err && row && row.count === 0) {
-              db.run(`INSERT INTO cajas_nombres (nombre) VALUES ('Caja Principal')`);
-            }
-          });
-
-          // Insertar categorías por defecto si no existen
-          const defaultCategories = ['Cafés Calientes', 'Cafés Fríos', 'Frappés', 'Especiales', 'Tés'];
-          defaultCategories.forEach(category => {
-            db.run(`INSERT OR IGNORE INTO categorias (nombre) VALUES (?)`, [category]);
-          });
-
-          // Agregar columna categoria_reemplazo a ingredientes si no existe
-          db.run(
-            `ALTER TABLE ingredientes ADD COLUMN categoria_reemplazo TEXT`,
-            (err) => {
-              if (err && !err.message.includes('duplicate column name')) {
-                console.error('Error al agregar categoria_reemplazo a ingredientes:', err.message);
-              } else if (!err) {
-                console.log('Columna categoria_reemplazo agregada a ingredientes');
-              }
-            }
-          );
-        }
-      );
+  // Insertar configuración por defecto si no existe
+  db.run(`INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('permitir_stock_negativo', '0')`);
+  
+  // Insertar caja por defecto si no existe ninguna
+  db.get('SELECT COUNT(*) as count FROM cajas_nombres', [], (err, row) => {
+    if (!err && row && row.count === 0) {
+      db.run(`INSERT INTO cajas_nombres (nombre) VALUES ('Caja Principal')`);
     }
-  );
+  });
+
+  // Insertar categorías por defecto si no existen
+  const defaultCategories = ['Cafés Calientes', 'Cafés Fríos', 'Frappés', 'Especiales', 'Tés'];
+  defaultCategories.forEach(category => {
+    db.run(`INSERT OR IGNORE INTO categorias (nombre) VALUES (?)`, [category]);
+  });
 }
 
 /**

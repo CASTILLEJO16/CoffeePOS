@@ -13,13 +13,12 @@ export function parseBusinessDate(value) {
   
   let str = String(value).trim();
   
-  // Si es un formato de base de datos SQL como "YYYY-MM-DD HH:MM:SS"
-  // lo interpretamos como hora de Tijuana directamente
+  // Si es formato SQL "YYYY-MM-DD HH:MM:SS"
+  // NO convertir a UTC. Mantener como hora local (ya viene en Tijuana)
   if (!str.includes('Z') && !str.includes('T')) {
-    // Interpretar como UTC (como se guarda en backend)
-    const iso = str.replace(' ', 'T') + 'Z';
-    const parsedUTC = new Date(iso);
-    return Number.isNaN(parsedUTC.getTime()) ? new Date() : parsedUTC;
+    const isoLocal = str.replace(' ', 'T');
+    const parsedLocal = new Date(isoLocal);
+    return Number.isNaN(parsedLocal.getTime()) ? new Date() : parsedLocal;
   }
   
   const parsed = new Date(str);
@@ -99,9 +98,15 @@ export function formatBusinessTime(date = new Date(), withSeconds = true) {
  * Fecha y hora en vivo (Tijuana)
  */
 export function formatBusinessDateTime(date = new Date()) {
+  // ✅ Si viene como string SQL, NO convertir ni aplicar timezone
+  if (typeof date === 'string' && date.includes(' ')) {
+    const [d, t] = date.split(' ');
+    const [y, m, day] = d.split('-');
+    return `${day} ${new Date(`${y}-${m}-01`).toLocaleString('es-MX', { month: 'short' })} ${y}, ${t.slice(0,5)}`;
+  }
+
   const parsed = typeof date === 'string' ? parseBusinessDate(date) : date;
   return parsed.toLocaleString('es-MX', {
-    timeZone: BUSINESS_TIMEZONE,
     year: 'numeric',
     month: 'short',
     day: 'numeric',

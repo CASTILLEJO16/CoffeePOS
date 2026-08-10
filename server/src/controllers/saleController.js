@@ -193,3 +193,29 @@ export async function getDailySummary(req, res) {
     });
   }
 }
+
+/**
+ * Obtiene KPIs de ventas con filtros
+ */
+export async function getSalesKPIs(req, res) {
+  try {
+    const { period, startDate, endDate, year } = req.query;
+
+    const kpis = await saleService.getSalesKPIs(period, startDate, endDate, year);
+
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
+    res.json({
+      success: true,
+      data: kpis
+    });
+  } catch (error) {
+    console.error('Error en getSalesKPIs:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}

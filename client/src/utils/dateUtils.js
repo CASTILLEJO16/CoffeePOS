@@ -9,10 +9,11 @@ export function formatToTijuana(dateString, formatStr = 'dd/MM/yyyy HH:mm:ss') {
   if (!dateString) return '';
   
   try {
-    // Si la fecha viene de SQLite (ej. "2023-10-25 15:30:00") y no tiene Z, la tratamos como UTC
+    // Si la fecha viene de SQLite ("YYYY-MM-DD HH:mm:ss") ya está en Tijuana.
+    // NO convertir a UTC (evita desfase). Interpretar como local.
     let dateObj = new Date(dateString);
     if (typeof dateString === 'string' && !dateString.includes('Z') && !dateString.includes('T')) {
-      dateObj = new Date(dateString + 'Z');
+      dateObj = new Date(dateString.replace(' ', 'T'));
     }
     
     return formatInTimeZone(dateObj, TIJUANA_TZ, formatStr);

@@ -9,12 +9,15 @@ router.use(authenticateToken);
 
 // Rutas para cajeros y administradores
 router.get('/', requireSellerOrAdmin, saleController.getSales);
-router.get('/:id', requireSellerOrAdmin, saleController.getSale);
 router.post('/', requireSellerOrAdmin, saleController.createSale);
-router.post('/:id/imprimir', requireSellerOrAdmin, saleController.printTicket);
 
-// Rutas exclusivas para administradores
+// Rutas exclusivas para administradores (deben ir antes de /:id)
 router.get('/resumen', requireAdmin, saleController.getDailySummary);
+router.get('/kpis', requireAdmin, saleController.getSalesKPIs);
+
+// Rutas con parámetros (deben ir al final)
+router.get('/:id', requireSellerOrAdmin, saleController.getSale);
+router.post('/:id/imprimir', requireSellerOrAdmin, saleController.printTicket);
 router.post('/:id/cancelar', requireAdmin, saleController.cancelSale);
 
 export default router;

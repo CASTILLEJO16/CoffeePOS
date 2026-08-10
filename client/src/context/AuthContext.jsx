@@ -8,6 +8,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // In Electron, always start at login (avoid restoring previous session/route)
+    try {
+      const isElectron = typeof window !== 'undefined' && window.location.protocol === 'file:';
+      if (isElectron) {
+        clearAuth();
+      }
+    } catch (_) {}
+
     const user = getUser();
     if (user) {
       setUser(user);

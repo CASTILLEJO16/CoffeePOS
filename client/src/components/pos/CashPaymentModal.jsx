@@ -5,6 +5,7 @@ import Input from '../common/Input.jsx';
 import { formatCurrency } from '../../utils/formatCurrency.js';
 
 export default function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
+  console.log('[CashPaymentModal] render', { isOpen, total });
   const [denominationsTotal, setDenominationsTotal] = useState(0);
   const [manualAmount, setManualAmount] = useState('');
   const [mode, setMode] = useState('buttons');
@@ -36,6 +37,7 @@ export default function CashPaymentModal({ isOpen, onClose, total, onConfirm }) 
     if (submitting) return;
     if (difference < 0) return;
 
+    console.log('[CashPaymentModal] confirm', { received, difference });
     setSubmitting(true);
     onConfirm({ recibido: received, cambio: difference });
     reset();
@@ -49,6 +51,7 @@ export default function CashPaymentModal({ isOpen, onClose, total, onConfirm }) 
   }
 
   function handleClose() {
+    console.log('[CashPaymentModal] close');
     reset();
     onClose();
   }

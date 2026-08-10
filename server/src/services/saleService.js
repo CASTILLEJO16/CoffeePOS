@@ -4,6 +4,7 @@ import { logAction } from './logService.js';
 import { getOpenCashRegisterByUser } from './cashRegisterService.js';
 import { nowInTijuanaSQL } from '../utils/dateTime.js';
 import { getBranchId } from '../utils/branchContext.js';
+import { formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Servicio de Ventas
@@ -320,9 +321,10 @@ export async function createSale(saleData, usuarioId = null) {
 
     // Insertar venta con caja_id y hora de Tijuana
     const fecha = nowInTijuanaSQL();
+    console.log('🔍 Creando venta con fecha:', fecha);
     const saleResult = await run(
-      'INSERT INTO ventas (subtotal, impuestos, total, metodo_pago, usuario_id, caja_id, fecha, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [subtotal, impuestos, total, metodo_pago, usuarioId, openCashRegister.id, fecha, branchId]
+      'INSERT INTO ventas (subtotal, impuestos, total, metodo_pago, tipo_tarjeta, usuario_id, caja_id, fecha, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [subtotal, impuestos, total, metodo_pago, saleData.tipo_tarjeta || null, usuarioId, openCashRegister.id, fecha, branchId]
     );
 
     const ventaId = saleResult.id;
@@ -454,7 +456,7 @@ export async function getSalesByDate(date, usuarioId = null) {
     let sql = `SELECT v.*, u.nombre as usuario_nombre 
                FROM ventas v
                LEFT JOIN usuarios u ON v.usuario_id = u.id
-               WHERE DATE(v.fecha) = ? AND v.branch_id = ? AND v.cancelada = 0`;
+               WHERE strftime('%Y-%m-%d', v.fecha) = ? AND v.branch_id = ? AND v.cancelada = 0`;
     const params = [date, branchId];
 
     if (usuarioId) {
@@ -511,7 +513,7 @@ export async function getSalesByDateRange(startDate, endDate, usuarioId = null) 
     let sql = `SELECT v.*, u.nombre as usuario_nombre 
                FROM ventas v
                LEFT JOIN usuarios u ON v.usuario_id = u.id
-               WHERE DATE(v.fecha) BETWEEN ? AND ? AND v.branch_id = ? AND v.cancelada = 0`;
+               WHERE strftime('%Y-%m-%d', v.fecha) BETWEEN ? AND ? AND v.branch_id = ? AND v.cancelada = 0`;
     const params = [startDate, endDate, branchId];
 
     if (usuarioId) {
@@ -561,4 +563,195 @@ async function attachSaleDetails(sales) {
     ...sale,
     detalles: bySale[sale.id] || []
   }));
+}
+
+/**
+ * Obtiene KPIs de ventas con filtros por período o año específico
+ * @param {string} period - 'day', 'week', 'month', 'year'
+ * @param {string} startDate - Fecha inicio (opcional)
+ * @param {string} endDate - Fecha fin (opcional)
+ * @param {string|number} selectedYear - Año específico (opcional)
+ * @returns {Object} KPIs de ventas
+ */
+export async function getSalesKPIs(period = 'day', startDate = null, endDate = null, selectedYear = null) {
+  try {
+    const branchId = getBranchId();
+    console.log('🔍 KPIs - Branch ID:', branchId);
+    console.log('🔍 KPIs - Period:', period);
+    console.log('🔍 KPIs - StartDate:', startDate);
+    console.log('🔍 KPIs - EndDate:', endDate);
+    console.log('🔍 KPIs - SelectedYear:', selectedYear);
+    
+    let dateFilter = '';
+    let params = [];
+
+    if (selectedYear) {
+      dateFilter = "strftime('%Y', fecha) = ?";
+      params.push(String(selectedYear));
+    } else if (startDate && endDate) {
+      dateFilter = "strftime('%Y-%m-%d', fecha) BETWEEN ? AND ?";
+      params.push(startDate, endDate);
+    } else {
+      const now = new Date();
+      const nowTijuana = formatInTimeZone(now, 'America/Tijuana', 'yyyy-MM-dd');
+      console.log('🔍 KPIs - Now Tijuana:', nowTijuana);
+      
+      switch (period) {
+        case 'day':
+          dateFilter = "strftime('%Y-%m-%d', fecha) = ?";
+          params.push(nowTijuana);
+          break;
+        case 'week':
+          const weekAgo = formatInTimeZone(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), 'America/Tijuana', 'yyyy-MM-dd');
+          dateFilter = "strftime('%Y-%m-%d', fecha) >= ?";
+          params.push(weekAgo);
+          break;
+        case 'month':
+          dateFilter = "strftime('%Y-%m', fecha) = ?";
+          params.push(formatInTimeZone(now, 'America/Tijuana', 'yyyy-MM'));
+          break;
+        case 'year':
+          dateFilter = "strftime('%Y', fecha) = ?";
+          params.push(formatInTimeZone(now, 'America/Tijuana', 'yyyy'));
+          break;
+        default:
+          dateFilter = "strftime('%Y-%m-%d', fecha) = ?";
+          params.push(nowTijuana);
+      }
+    }
+    // Ensure correct parameter order: [dateFilter params..., branchId]
+    params.push(branchId);
+
+    // Obtener años con ventas disponibles para el selector dinámico
+    const availableYearsRows = await query(
+      `SELECT DISTINCT strftime('%Y', fecha) as anio FROM ventas WHERE branch_id = ? AND cancelada = 0 AND fecha IS NOT NULL ORDER BY anio DESC`,
+      [branchId]
+    );
+    const currentYearStr = String(new Date().getFullYear());
+    const yearSet = new Set((availableYearsRows || []).map(r => r.anio).filter(Boolean));
+    yearSet.add(currentYearStr);
+    const aniosDisponibles = Array.from(yearSet).sort((a, b) => b.localeCompare(a));
+
+    // KPIs generales
+    const generalKPIs = await queryOne(
+      `SELECT 
+        COUNT(*) as total_ventas,
+        SUM(subtotal) as subtotal,
+        SUM(impuestos) as impuestos,
+        SUM(total) as total,
+        AVG(total) as ticket_promedio
+       FROM ventas
+       WHERE ${dateFilter} AND branch_id = ? AND cancelada = 0`,
+      params
+    );
+
+    // Ventas por método de pago
+    const paymentMethods = await query(
+      `SELECT 
+        metodo_pago,
+        tipo_tarjeta,
+        COUNT(*) as cantidad,
+        SUM(total) as total
+       FROM ventas
+       WHERE ${dateFilter} AND branch_id = ? AND cancelada = 0
+       GROUP BY metodo_pago, tipo_tarjeta`,
+      params
+    );
+    console.log(' KPIs - Payment methods:', paymentMethods);
+
+    // Ventas por hora (para gráfico de picos)
+    const hourlySales = await query(
+      `SELECT 
+        strftime('%H', fecha) as hora,
+        COUNT(*) as cantidad_ventas,
+        SUM(total) as total_ventas
+       FROM ventas
+       WHERE ${dateFilter} AND branch_id = ? AND cancelada = 0
+       GROUP BY strftime('%H', fecha)
+       ORDER BY hora`,
+      params
+    );
+
+    // Productos más vendidos
+    const topProducts = await query(
+      `SELECT 
+        p.nombre as producto_nombre,
+        SUM(d.cantidad) as cantidad_vendida,
+        SUM(d.importe) as total_ingresos
+       FROM detalle_ventas d
+       JOIN ventas v ON d.venta_id = v.id
+       JOIN productos p ON d.producto_id = p.id
+       WHERE ${dateFilter} AND v.branch_id = ? AND v.cancelada = 0
+       GROUP BY d.producto_id
+       ORDER BY cantidad_vendida DESC
+       LIMIT 10`,
+      params
+    );
+
+    // Ventas por día (para gráfico de tendencia)
+    const dailySales = await query(
+      `SELECT 
+        strftime('%Y-%m-%d', fecha) as fecha,
+        COUNT(*) as cantidad_ventas,
+        SUM(total) as total_ventas
+       FROM ventas
+       WHERE ${dateFilter} AND branch_id = ? AND cancelada = 0
+       GROUP BY strftime('%Y-%m-%d', fecha)
+       ORDER BY fecha`,
+      params
+    );
+
+    // Ventas por mes (Enero a Diciembre)
+    const monthlySalesQuery = await query(
+      `SELECT 
+        strftime('%m', fecha) as mes_num,
+        COUNT(*) as cantidad_ventas,
+        SUM(total) as total_ventas
+       FROM ventas
+       WHERE ${dateFilter} AND branch_id = ? AND cancelada = 0
+       GROUP BY strftime('%m', fecha)
+       ORDER BY mes_num`,
+      params
+    );
+
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const monthlyMap = {};
+    (monthlySalesQuery || []).forEach(m => {
+      const idx = parseInt(m.mes_num, 10) - 1;
+      if (idx >= 0 && idx < 12) {
+        monthlyMap[idx] = {
+          ventas: Number(m.cantidad_ventas || 0),
+          total: Number(m.total_ventas || 0)
+        };
+      }
+    });
+
+    const fullYearMonths = monthNames.map((nombre, idx) => ({
+      mes: nombre,
+      mes_num: String(idx + 1).padStart(2, '0'),
+      ventas: monthlyMap[idx] ? monthlyMap[idx].ventas : 0,
+      total: monthlyMap[idx] ? monthlyMap[idx].total : 0
+    }));
+
+    const result = {
+      general: {
+        total_ventas: generalKPIs?.total_ventas || 0,
+        subtotal: generalKPIs?.subtotal || 0,
+        impuestos: generalKPIs?.impuestos || 0,
+        total: generalKPIs?.total || 0,
+        ticket_promedio: generalKPIs?.ticket_promedio || 0
+      },
+      por_metodo_pago: paymentMethods || [],
+      por_hora: hourlySales || [],
+      productos_top: topProducts || [],
+      por_dia: dailySales || [],
+      por_mes: fullYearMonths,
+      anios_disponibles: aniosDisponibles
+    };
+    
+    return result;
+  } catch (error) {
+    console.error('Error al obtener KPIs de ventas:', error);
+    throw error;
+  }
 }

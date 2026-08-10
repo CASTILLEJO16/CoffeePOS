@@ -1,6 +1,8 @@
 {
   "name": "coffe-pos-electron",
-  "version": "1.0.0",
+  "version": "1.0.10",
+  "description": "CoffeePOS - Sistema de Punto de Venta para Cafeterías",
+  "author": "CASTILLEJO16",
   "main": "main.js",
   "type": "commonjs",
   "build": {
@@ -28,15 +30,42 @@
         "owner": "CASTILLEJO16",
         "repo": "CoffeePOS"
       }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "asar": true,
+    "asarUnpack": [
+      "server/node_modules/sqlite3/**/*",
+      "server/node_modules/better-sqlite3/**/*"
     ]
   },
   "scripts": {
     "dev": "concurrently \"npm --prefix ../server run dev\" \"npm --prefix ../client run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "start": "electron .",
     "build:client": "npm --prefix ../client run build",
-    "clean": "npx rimraf dist ../client/dist",
+    "clean": "npx rimraf dist ../client/dist release",
     "dist": "npm run build:client && electron-builder",
-    "dist:clean": "npm run clean && npm run build:client && electron-builder"
+    "dist:clean": "npm run clean && npm run build:client && electron-builder",
+    "release": "npm version patch --no-git-tag-version && npm run dist:clean",
+    "release:minor": "npm version minor --no-git-tag-version && npm run dist:clean",
+    "release:major": "npm version major --no-git-tag-version && npm run dist:clean",
+    "publish:github": "electron-builder --publish always"
   },
   "dependencies": {
     "concurrently": "^8.2.2",

@@ -6,7 +6,7 @@ import { getCategories, createCategory } from '../../services/categoryService.js
 import './ProductForm.css';
 
 const DEFAULT_CATEGORIES = ['Cafés Calientes', 'Cafés Fríos', 'Frappés', 'Especiales', 'Tés'];
-const SERVER_URL = 'http://localhost:3001';
+const SERVER_URL = 'http://localhost:3000';
 
 export default function ProductForm({ product, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({

@@ -29,9 +29,13 @@ export default function Admin() {
       formData.append('nombre', productData.nombre);
       formData.append('precio', productData.precio);
       formData.append('categoria', productData.categoria);
+      
+      // Solo enviar la imagen si se seleccionó una nueva
       if (productData.imageFile) {
         formData.append('imagen', productData.imageFile);
       }
+      // Si estamos editando y no hay nueva imagen, NO enviar el campo imagen
+      // para que el backend mantenga la imagen existente
 
       if (editingProduct) {
         await updateProduct(editingProduct.id, formData);

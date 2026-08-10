@@ -15,6 +15,7 @@ import {
 import { getUserActivity } from '../services/userActivityService.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import { formatBusinessDateTime } from '../utils/dateTime.js';
+import { formatPaymentMethod } from '../utils/salesAnalytics.js';
 import './UserActivity.css';
 
 export default function UserActivity() {
@@ -90,7 +91,8 @@ export default function UserActivity() {
         nombre: `Venta #${venta.id}`,
         monto: venta.total,
         metodo: venta.metodo_pago,
-        detalles: `Venta por ${formatCurrency(venta.total)} - ${venta.metodo_pago}`,
+        tipoTarjeta: venta.tipo_tarjeta,
+        detalles: `Venta por ${formatCurrency(venta.total)} - ${formatPaymentMethod(venta.metodo_pago, venta.tipo_tarjeta)}`,
         icon: ShoppingCart,
         iconColor: '#8B4513'
       });
@@ -109,8 +111,12 @@ export default function UserActivity() {
       });
     });
 
-    // Ordenar por fecha descendente
-    activities.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    // Ordenar por fecha descendente SIN convertir zona (las fechas ya vienen en Tijuana)
+    activities.sort((a, b) => {
+      const fa = a.fecha || '';
+      const fb = b.fecha || '';
+      return fb.localeCompare(fa); // YYYY-MM-DD HH:mm:ss ordena correctamente como string
+    });
 
     // Filtrar por tab
     if (activeTab !== 'all') {
@@ -147,7 +153,7 @@ export default function UserActivity() {
   const filteredActivities = getFilteredActivities();
 
   return (
-    <div className="user-activity-page">
+    <div className="admin-page user-activity-page">
       <div className="user-activity-container">
         <div className="activity-header">
           <button className="back-button" onClick={() => navigate('/admin/usuarios')}>

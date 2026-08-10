@@ -88,10 +88,20 @@ export async function updateProduct(id, productData, usuarioId = null) {
   try {
     const { nombre, precio, categoria, imagen, activo } = productData;
     
-    await run(
-      'UPDATE productos SET nombre = ?, precio = ?, categoria = ?, imagen = ?, activo = ? WHERE id = ?',
-      [nombre, precio, categoria, imagen, activo, id]
-    );
+    // Si se proporciona una imagen (incluyendo null para eliminarla), actualizarla
+    // Si no se proporciona, mantener la imagen existente
+    if (imagen !== undefined) {
+      await run(
+        'UPDATE productos SET nombre = ?, precio = ?, categoria = ?, imagen = ?, activo = ? WHERE id = ?',
+        [nombre, precio, categoria, imagen, activo, id]
+      );
+    } else {
+      // Mantener la imagen existente
+      await run(
+        'UPDATE productos SET nombre = ?, precio = ?, categoria = ?, activo = ? WHERE id = ?',
+        [nombre, precio, categoria, activo, id]
+      );
+    }
 
     await logAction(usuarioId, 'ACTUALIZAR_PRODUCTO', `Producto actualizado: ${nombre}`);
     

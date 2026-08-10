@@ -102,7 +102,7 @@ export default function Configuracion() {
   }
 
   return (
-    <div className="configuracion-page">
+    <div className="admin-page configuracion-page">
       <div className="configuracion-header">
         <h1 className="configuracion-title">Configuración del Sistema</h1>
       </div>

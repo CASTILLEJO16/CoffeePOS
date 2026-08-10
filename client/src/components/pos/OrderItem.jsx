@@ -46,7 +46,7 @@ export default function OrderItem({ item, onUpdateQuantity, onRemove }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
             className="order-item-qty-btn"
-            onClick={() => onUpdateQuantity(item.unique_id, item.cantidad - 1)}
+            onClick={() => onUpdateQuantity(item.uniqueId, item.cantidad - 1)}
           >
             <Minus size={14} />
           </button>
@@ -55,7 +55,7 @@ export default function OrderItem({ item, onUpdateQuantity, onRemove }) {
 
           <button
             className="order-item-qty-btn"
-            onClick={() => onUpdateQuantity(item.unique_id, item.cantidad + 1)}
+            onClick={() => onUpdateQuantity(item.uniqueId, item.cantidad + 1)}
           >
             <Plus size={14} />
           </button>
@@ -72,7 +72,7 @@ export default function OrderItem({ item, onUpdateQuantity, onRemove }) {
         <button 
           type="button"
           className="order-item-remove" 
-          onClick={() => onRemove(item.unique_id)}
+          onClick={() => onRemove(item.uniqueId)}
           aria-label="Eliminar"
         >
           <X size={16} />

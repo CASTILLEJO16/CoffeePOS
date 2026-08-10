@@ -23,7 +23,7 @@ import Swal from 'sweetalert2';
 import './POS.css';
 
 export default function POS() {
-  const { items, subtotal, impuestos, total, addItem, removeItem, clearOrder, recalcTotals } = useOrder();
+  const { items, subtotal, impuestos, total, addItem, removeItem, updateQuantity, clearOrder, recalcTotals } = useOrder();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
@@ -171,9 +171,11 @@ export default function POS() {
 
   async function handlePayment(method) {
     try {
+      console.log('[POS] handlePayment called with method:', method);
       if (processing) return;
 
       if (method === 'efectivo') {
+        console.log('[POS] Opening CashPaymentModal');
         setShowPaymentModal(false);
         setShowCashModal(true);
         return;
@@ -238,6 +240,7 @@ export default function POS() {
 
   async function handleCashConfirm({ recibido, cambio }) {
     try {
+      console.log('[POS] handleCashConfirm', { recibido, cambio });
       if (processing) return;
       setProcessing(true);
 
@@ -407,29 +410,10 @@ export default function POS() {
               <div className="order-items">
                 {items.map(item => (
                   <OrderItem
-                    key={item.unique_id}
+                    key={item.uniqueId}
                     item={item}
                     onRemove={handleRemoveItem}
-                    onUpdateQuantity={(id, qty) => {
-                      if (qty <= 0) {
-                        removeItem(id);
-                      } else {
-                        // reuse existing context method
-                        // find current item and update
-                        const current = items.find(i => i.unique_id === id);
-                        if (!current) return;
-                        // dispatch through add/remove pattern
-                        if (qty > current.cantidad) {
-                          addItem({
-                            id: current.producto_id,
-                            nombre: current.producto_nombre,
-                            precio: current.precio_base
-                          }, current.personalizaciones);
-                        } else {
-                          removeItem(id);
-                        }
-                      }
-                    }}
+                    onUpdateQuantity={(id, qty) => updateQuantity(id, qty)}
                   />
                 ))}
               </div>

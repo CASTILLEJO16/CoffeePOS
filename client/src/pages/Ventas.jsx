@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getSales } from '../services/saleService.js';
 import { formatCurrency, formatDate } from '../utils/formatCurrency.js';
+import { formatPaymentMethod } from '../utils/salesAnalytics.js';
 import './Ventas.css';
 
 export default function Ventas() {
@@ -70,7 +71,7 @@ export default function Ventas() {
                   <td className="total-cell">{formatCurrency(sale.total)}</td>
                   <td>
                     <span className={`payment-badge ${sale.metodo_pago}`}>
-                      {sale.metodo_pago}
+                      {formatPaymentMethod(sale.metodo_pago, sale.tipo_tarjeta)}
                     </span>
                   </td>
                 </tr>

@@ -14,6 +14,7 @@ import Ventas from './pages/Ventas.jsx';
 import VentasVendedor from './pages/VentasVendedor.jsx';
 import Configuracion from './pages/Configuracion.jsx';
 import AdminAlmacen from './pages/AdminAlmacen.jsx';
+import AdminKPIs from './pages/AdminKPIs.jsx';
 import VendedorAlmacen from './pages/VendedorAlmacen.jsx';
 import AperturaCaja from './pages/AperturaCaja.jsx';
 import CierreCaja from './pages/CierreCaja.jsx';
@@ -22,7 +23,7 @@ import CashRegisterCheck from './components/CashRegisterCheck.jsx';
 import MainLayout from './layouts/MainLayout.jsx';
 import AdminLayout from './layouts/AdminLayout.jsx';
 import './styles/global.css';
-import ErrorBoundary from './components/ErrorBoundary.jsx';
+import ErrorBoundary from './components/common/ErrorBoundary.jsx';
 
 function ProtectedRoute({ children, allowAdmin = false }) {
   const { isAuthenticated, loading, user } = useAuth();
@@ -130,6 +131,7 @@ function App() {
               <Route path="usuarios" element={<Usuarios />} />
               <Route path="usuarios/:userId" element={<UserActivity />} />
               <Route path="ventas" element={<Ventas />} />
+              <Route path="kpis" element={<AdminKPIs />} />
               <Route path="almacen" element={<AdminAlmacen />} />
               <Route path="cortes-caja" element={<CortesCaja />} />
               <Route path="configuracion" element={<Configuracion />} />

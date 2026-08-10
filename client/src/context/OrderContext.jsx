@@ -24,7 +24,7 @@ function orderReducer(state, action) {
       const customizationKey = JSON.stringify(customization || {});
       const uniqueId = `${product.id}_${customizationKey}`;
       
-      const existingItem = state.items.find(item => item.unique_id === uniqueId);
+      const existingItem = state.items.find(item => item.uniqueId === uniqueId);
       
       // Calcular precio adicional por personalizaciones
       const customizationPrice = calculateCustomizationPrice(customization);
@@ -33,7 +33,7 @@ function orderReducer(state, action) {
       let newItems;
       if (existingItem) {
         newItems = state.items.map(item =>
-          item.unique_id === uniqueId
+          item.uniqueId === uniqueId
             ? { ...item, cantidad: item.cantidad + 1, importe: (item.cantidad + 1) * item.precio_final }
             : item
         );
@@ -41,7 +41,7 @@ function orderReducer(state, action) {
         newItems = [
           ...state.items,
           {
-            unique_id: uniqueId,
+            uniqueId: uniqueId,
             producto_id: product.id,
             producto_nombre: product.nombre,
             precio_base: product.precio,
@@ -69,7 +69,7 @@ function orderReducer(state, action) {
 
     case 'REMOVE_ITEM': {
       const { uniqueId } = action.payload;
-      const newItems = state.items.filter(item => item.unique_id !== uniqueId);
+      const newItems = state.items.filter(item => item.uniqueId !== uniqueId);
       
       const subtotal = newItems.reduce((sum, item) => sum + item.importe, 0);
       const iva = getIVARate();
@@ -92,7 +92,7 @@ function orderReducer(state, action) {
       }
 
       const newItems = state.items.map(item =>
-        item.unique_id === uniqueId
+        item.uniqueId === uniqueId
           ? { ...item, cantidad, importe: cantidad * item.precio_final }
           : item
       );

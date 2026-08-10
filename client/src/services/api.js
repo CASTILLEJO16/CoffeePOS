@@ -32,7 +32,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Use SPA navigation-safe fallback
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('force-logout'));
+        }
+      } catch (_) {}
     }
     return Promise.reject(error);
   }

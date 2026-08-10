@@ -38,7 +38,7 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="usuarios-page">
+    <div className="admin-page usuarios-page">
       <div className="usuarios-header">
         <h1 className="usuarios-title">Gestión de Usuarios</h1>
         <Button onClick={handleAddUser}>

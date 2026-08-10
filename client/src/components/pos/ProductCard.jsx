@@ -3,7 +3,7 @@ import { Coffee } from 'lucide-react';
 import './ProductCard.css';
 import { formatCurrency } from '../../utils/formatCurrency.js';
 
-const SERVER_URL = 'http://localhost:3001';
+const SERVER_URL = 'http://localhost:3000';
 
 function getImageSrc(imagen) {
   if (!imagen) return null;
@@ -42,4 +42,3 @@ export default function ProductCard({ product, onClick }) {
     </div>
   );
 }
-
