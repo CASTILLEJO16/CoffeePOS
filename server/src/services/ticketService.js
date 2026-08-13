@@ -19,7 +19,58 @@ export function generateTicket(sale) {
   lines.push('');
   lines.push(`Ticket #: ${sale.id}`);
   lines.push(`Fecha: ${formatDate(sale.fecha)}`);
-  lines.push(`Método: ${sale.metodo_pago.toUpperCase()}`);
+  lines.push(''.padEnd(width, '-'));
+
+  // Desglose de métodos de pago
+  if (sale.metodo_pago === 'mixto') {
+    lines.push('MÉTODO DE PAGO: MIXTO');
+    lines.push(''.padEnd(width, '-'));
+
+    if (sale.efectivo_mxn > 0) {
+      lines.push(`Efectivo MXN: ${formatCurrency(sale.efectivo_mxn).padStart(width - 15)}`);
+    }
+    if (sale.efectivo_usd > 0) {
+      const usdToMxn = sale.efectivo_usd * (sale.tipo_cambio || 20);
+      lines.push(`Efectivo USD: ${formatCurrency(sale.efectivo_usd).padStart(width - 15)}`);
+      lines.push(`  (= MXN):   ${formatCurrency(usdToMxn).padStart(width - 15)}`);
+    }
+    if (sale.tarjeta_credito > 0) {
+      lines.push(`Tarjeta Crédito: ${formatCurrency(sale.tarjeta_credito).padStart(width - 18)}`);
+    }
+    if (sale.tarjeta_debito > 0) {
+      lines.push(`Tarjeta Débito: ${formatCurrency(sale.tarjeta_debito).padStart(width - 18)}`);
+    }
+
+    if (sale.tipo_cambio) {
+      lines.push(''.padEnd(width, '-'));
+      lines.push(`Tipo de Cambio: 1 USD = $${sale.tipo_cambio.toFixed(2)}`);
+    }
+  } else if (sale.metodo_pago === 'dolar') {
+    lines.push('MÉTODO DE PAGO: USD');
+    lines.push(''.padEnd(width, '-'));
+    if (sale.monto_dolar) {
+      lines.push(`Monto USD: ${formatCurrency(sale.monto_dolar).padStart(width - 13)}`);
+    }
+    if (sale.dolar_recibido) {
+      lines.push(`Recibido USD: ${formatCurrency(sale.dolar_recibido).padStart(width - 15)}`);
+    }
+    if (sale.cambio_pesos !== null && sale.cambio_pesos !== undefined) {
+      lines.push(`Cambio MXN: ${formatCurrency(sale.cambio_pesos).padStart(width - 14)}`);
+    }
+    if (sale.tipo_cambio) {
+      lines.push(''.padEnd(width, '-'));
+      lines.push(`Tipo de Cambio: 1 USD = $${sale.tipo_cambio.toFixed(2)}`);
+    }
+  } else if (sale.metodo_pago === 'tarjeta') {
+    lines.push(`MÉTODO DE PAGO: TARJETA`);
+    if (sale.tipo_tarjeta) {
+      lines.push(''.padEnd(width, '-'));
+      lines.push(`Tipo: ${sale.tipo_tarjeta.toUpperCase()}`);
+    }
+  } else {
+    lines.push(`MÉTODO DE PAGO: ${sale.metodo_pago.toUpperCase()}`);
+  }
+
   lines.push(''.padEnd(width, '-'));
 
   // Detalles de productos
@@ -32,7 +83,13 @@ export function generateTicket(sale) {
     const precio = formatCurrency(detail.precio).padStart(8);
     const importe = formatCurrency(detail.importe).padStart(8);
     lines.push(`${cantidad}${nombre}${precio}${importe}`);
-    
+
+    // Agregar descuento si existe
+    if (detail.descuento && detail.descuento > 0) {
+      const discountAmount = detail.precio * (detail.descuento / 100) * detail.cantidad;
+      lines.push(`     Descuento: -${detail.descuento}% -${formatCurrency(discountAmount).padStart(8)}`);
+    }
+
     // Agregar personalizaciones si existen
     if (detail.personalizaciones) {
       const customText = getCustomizationText(detail.personalizaciones);
@@ -46,7 +103,8 @@ export function generateTicket(sale) {
 
   // Totales
   lines.push(`Subtotal: ${formatCurrency(sale.subtotal).padStart(width - 11)}`);
-  lines.push(`IVA (${(process.env.IVA_RATE || 0.16) * 100}%): ${formatCurrency(sale.impuestos).padStart(width - 11)}`);
+  const ivaRate = sale.iva_rate || 0.16;
+  lines.push(`IVA (${(ivaRate * 100).toFixed(0)}%): ${formatCurrency(sale.impuestos).padStart(width - 11)}`);
   lines.push(''.padEnd(width, '='));
   lines.push(`TOTAL: ${formatCurrency(sale.total).padStart(width - 8)}`);
   lines.push(''.padEnd(width, '='));

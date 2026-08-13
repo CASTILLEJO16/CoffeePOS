@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import './Modal.css';
 
-export default function Modal({ isOpen, onClose, title, children, size = 'medium' }) {
+export default function Modal({ isOpen, onClose, title, children, size = 'medium', footer }) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -17,16 +17,10 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
 
   if (!isOpen) return null;
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  };
-
   return (
-    <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
-      <div 
-        className={`modal-content modal-${size}`} 
+    <div className="modal-overlay">
+      <div
+        className={`modal-content modal-${size}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -35,8 +29,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
         {title && (
           <div className="modal-header">
             <h2 id="modal-title" className="modal-title">{title}</h2>
-            <button 
-              className="modal-close" 
+            <button
+              className="modal-close"
               onClick={onClose}
               aria-label="Cerrar modal"
             >
@@ -47,6 +41,11 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
         <div className="modal-body">
           {children}
         </div>
+        {footer && (
+          <div className="modal-footer">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

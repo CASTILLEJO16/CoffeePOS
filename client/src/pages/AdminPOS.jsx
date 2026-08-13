@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatBusinessTime } from '../utils/dateTime.js';
-import { Search, Coffee, ShoppingCart, DollarSign, CreditCard, Smartphone, Sun, Moon, LogOut } from 'lucide-react';
-import BranchSelector from '../components/common/BranchSelector.jsx';
+import { formatCurrency } from '../utils/formatCurrency.js';
+import { Search, Coffee, ShoppingCart, DollarSign, CreditCard, Smartphone, Sun, Moon, LogOut, Wallet } from 'lucide-react';
+import { useOrder } from '../context/OrderContext.jsx';
 import { useAdminOrder } from '../context/AdminOrderContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { getProducts } from '../services/productService.js';
+import api from '../services/api.js';
 import { createSale } from '../services/saleService.js';
 import { printTicket } from '../services/ticketService.js';
+import { printLabels } from '../services/labelService.js';
+import { getOpenCashRegister } from '../services/cashRegisterService.js';
+import { getAllConfig } from '../services/configService.js';
 import { DEFAULT_CATEGORIES, getCategories } from '../utils/constants.js';
 import ProductCard from '../components/pos/ProductCard.jsx';
 import OrderItem from '../components/pos/OrderItem.jsx';
@@ -16,13 +21,15 @@ import Modal from '../components/common/Modal.jsx';
 import Toast from '../components/common/Toast.jsx';
 import ProductCustomizationModal from '../components/pos/ProductCustomizationModal.jsx';
 import CashPaymentModal from '../components/pos/CashPaymentModal.jsx';
+import DollarPaymentModal from '../components/pos/DollarPaymentModal.jsx';
+import MixedPaymentModal from '../components/pos/MixedPaymentModal.jsx';
 import { useToast } from '../hooks/useToast.js';
-import { getOpenCashRegister } from '../services/cashRegisterService.js';
 import Swal from 'sweetalert2';
 import './AdminPOS.css';
 
 export default function AdminPOS() {
-  const { items, subtotal, impuestos, total, addItem, removeItem, updateQuantity, clearOrder, recalcTotals } = useAdminOrder();
+  const { items, subtotal, impuestos, total, addItem, removeItem, updateQuantity, clearOrder, recalcTotals, customerName, setCustomerName, updateItem } = useAdminOrder();
+  console.log('[AdminPOS] Estado de la orden - Items:', items.length, 'Subtotal:', subtotal, 'Impuestos:', impuestos, 'Total:', total);
   const { theme, toggleTheme } = useTheme();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -32,13 +39,18 @@ export default function AdminPOS() {
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
+  const [showDollarModal, setShowDollarModal] = useState(false);
   const [showCardTypeModal, setShowCardTypeModal] = useState(false);
+  const [showMixedPaymentModal, setShowMixedPaymentModal] = useState(false);
+  const [currentTipoCambio, setCurrentTipoCambio] = useState(20.00); // Valor específico para el modal actual
   const [processing, setProcessing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null); // Para edición de items existentes
   const [cashRegister, setCashRegister] = useState(null);
-  const [tipoCambio, setTipoCambio] = useState(18);
+  const [tipoCambio, setTipoCambio] = useState(20.00);
   const [ivaRate, setIvaRate] = useState(0.16);
+  const [imprimirEtiquetas, setImprimirEtiquetas] = useState(true);
   const { toast, showToast, hideToast } = useToast();
   const navigate = useNavigate();
 
@@ -48,6 +60,7 @@ export default function AdminPOS() {
     loadCashRegister();
     loadTipoCambio();
     loadIVA();
+    loadLabelConfig();
   }, [searchTerm, selectedCategory]);
 
   // Atajos de teclado (modo POS rápido)
@@ -85,11 +98,32 @@ export default function AdminPOS() {
     return () => window.removeEventListener('ivaUpdated', handleIVAUpdate);
   }, []);
 
+  // Escuchar cambios de configuración (tipo de cambio) usando localStorage (funciona entre pestañas)
+  useEffect(() => {
+    function handleConfigUpdate() {
+      console.log('[AdminPOS] Evento configUpdated recibido, recargando tipo de cambio...');
+      loadTipoCambio();
+    }
+    
+    function handleStorageChange(e) {
+      if (e.key === 'config_updated_at') {
+        console.log('[AdminPOS] Cambio en localStorage detectado, recargando tipo de cambio...');
+        loadTipoCambio();
+      }
+    }
+    
+    window.addEventListener('configUpdated', handleConfigUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('configUpdated', handleConfigUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   async function loadTipoCambio() {
     try {
-      const res = await fetch('/api/configuracion');
-      const json = await res.json();
-      const tc = json?.data?.tipo_cambio;
+      const config = await getAllConfig();
+      const tc = config?.tipo_cambio_dolar;
       if (tc) setTipoCambio(parseFloat(tc));
     } catch {}
   }
@@ -104,6 +138,16 @@ export default function AdminPOS() {
       }
     } catch (e) {
       console.error('Error cargando IVA', e);
+    }
+  }
+
+  async function loadLabelConfig() {
+    try {
+      const config = await getAllConfig();
+      const imprimirEtiquetasConfig = config?.imprimir_etiquetas;
+      setImprimirEtiquetas(imprimirEtiquetasConfig === '1' || imprimirEtiquetasConfig === 'true');
+    } catch (error) {
+      console.error('Error cargando configuración de etiquetas:', error);
     }
   }
 
@@ -148,9 +192,28 @@ export default function AdminPOS() {
   }
 
   function handleCustomizationConfirm(customization) {
-    if (selectedProduct) {
+    if (editingItem) {
+      // Estamos editando un item existente
+      updateItem(editingItem.uniqueId, customization);
+      setEditingItem(null);
+    } else if (selectedProduct) {
+      // Estamos agregando un nuevo producto
       addItem(selectedProduct, customization);
     }
+    setShowCustomizationModal(false);
+    setSelectedProduct(null);
+  }
+
+  function handleEditItem(item) {
+    setEditingItem(item);
+    setSelectedProduct({
+      id: item.producto_id,
+      nombre: item.producto_nombre,
+      precio: item.precio_base,
+      categoria: '',
+      descuento: item.descuento
+    });
+    setShowCustomizationModal(true);
   }
 
   function handleRemoveItem(uniqueId) {
@@ -180,6 +243,20 @@ export default function AdminPOS() {
       if (method === 'tarjeta') {
         setShowPaymentModal(false);
         setShowCardTypeModal(true);
+        return;
+      }
+
+      if (method === 'usd') {
+        console.log('[AdminPOS] Opening DollarPaymentModal - Recargando tipo de cambio antes de abrir modal');
+        console.log('[AdminPOS] Estado actual de la orden - Subtotal:', subtotal, 'Impuestos:', impuestos, 'Total:', total);
+        const config = await getAllConfig();
+        const tc = config?.tipo_cambio_dolar;
+        const parsedTc = tc ? parseFloat(tc) : 20.00;
+        console.log('[AdminPOS] DollarPaymentModal - Tipo de cambio cargado:', parsedTc);
+        setCurrentTipoCambio(parsedTc); // Actualizar el valor específico para este modal
+        console.log('[AdminPOS] Valor que se pasará al modal - Total:', total);
+        setShowPaymentModal(false);
+        setShowDollarModal(true);
         return;
       }
 
@@ -213,13 +290,62 @@ export default function AdminPOS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale);
+      printTicket(sale, customerName);
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
       clearOrder();
+      setCustomerName('');
       setShowPaymentModal(false);
 
       Swal.fire({
         title: '¡Venta Exitosa!',
         text: 'La venta se ha procesado correctamente.',
+        icon: 'success',
+        confirmButtonText: 'Aceptar',
+        timer: 3000,
+        timerProgressBar: true
+      });
+    } catch (error) {
+      console.error('Error al procesar venta:', error);
+      showToast(error.message || 'Error al procesar la venta', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handleDollarConfirm({ dolar_recibido, cambio_pesos, tipo_cambio, monto_dolar }) {
+    try {
+      console.log('[AdminPOS] handleDollarConfirm', { dolar_recibido, cambio_pesos, tipo_cambio, monto_dolar });
+      if (processing) return;
+      setProcessing(true);
+
+      const saleData = {
+        items: items.map(item => ({
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          personalizaciones: item.personalizaciones,
+          precio_final: item.precio_final
+        })),
+        metodo_pago: 'dolar',
+        tipo_cambio,
+        dolar_recibido,
+        iva_rate: localStorage.getItem('iva_rate')
+      };
+
+      const sale = await createSale(saleData);
+      window.dispatchEvent(new Event('saleCreated'));
+      printTicket(sale, customerName);
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
+      clearOrder();
+      setCustomerName('');
+      setShowDollarModal(false);
+
+      Swal.fire({
+        title: '¡Venta Exitosa!',
+        text: `Venta procesada: ${formatCurrency(total)} MXN = $${monto_dolar.toFixed(2)} USD`,
         icon: 'success',
         confirmButtonText: 'Aceptar',
         timer: 3000,
@@ -254,8 +380,12 @@ export default function AdminPOS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale);
+      printTicket(sale, customerName);
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
       clearOrder();
+      setCustomerName('');
       setShowCashModal(false);
 
       Swal.fire({
@@ -295,8 +425,12 @@ export default function AdminPOS() {
       };
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale);
+      printTicket(sale, customerName);
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
       clearOrder();
+      setCustomerName('');
       setShowCardTypeModal(false);
 
       Swal.fire({
@@ -310,6 +444,54 @@ export default function AdminPOS() {
     } catch (error) {
       console.error('Error al procesar venta:', error);
       showToast('Error al procesar la venta', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handleMixedPayment(paymentData) {
+    try {
+      console.log('[AdminPOS] handleMixedPayment', paymentData);
+      if (!cashRegister) {
+        showToast('Debes abrir una caja antes de vender', 'error');
+        return;
+      }
+
+      setProcessing(true);
+
+      const saleData = {
+        items: items.map(item => ({
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          personalizaciones: item.personalizaciones,
+          precio_final: item.precio_final
+        })),
+        metodo_pago: 'mixto',
+        ...paymentData,
+        iva_rate: localStorage.getItem('iva_rate')
+      };
+
+      const sale = await createSale(saleData);
+      window.dispatchEvent(new Event('saleCreated'));
+      printTicket(sale, customerName);
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
+      clearOrder();
+      setCustomerName('');
+      setShowMixedPaymentModal(false);
+
+      Swal.fire({
+        title: '¡Venta Exitosa!',
+        text: 'La venta se ha procesado correctamente.',
+        icon: 'success',
+        confirmButtonText: 'Aceptar',
+        timer: 3000,
+        timerProgressBar: true
+      });
+    } catch (error) {
+      console.error('Error al procesar venta:', error);
+      showToast(error.message || 'Error al procesar la venta', 'error');
     } finally {
       setProcessing(false);
     }
@@ -338,7 +520,7 @@ export default function AdminPOS() {
 
   function handleCloseCashRegister() {
     if (cashRegister) {
-      navigate(`/cierre-caja/${cashRegister.id}`);
+      navigate(`/admin/cierre-caja/${cashRegister.id}`);
     }
   }
 
@@ -359,10 +541,19 @@ export default function AdminPOS() {
             )}
           </div>
           <div className="pos-header-right">
-            <BranchSelector />
             <div aria-live="polite" style={{ fontSize: 12, opacity: 0.8 }}>
               {cashRegister ? 'Caja abierta' : 'Sin caja abierta'}
             </div>
+            {!cashRegister && (
+              <button
+                className="open-cash-register-btn"
+                onClick={() => navigate('/admin/apertura-caja')}
+                title="Abrir Caja"
+              >
+                <Wallet size={20} />
+                <span>Abrir Caja</span>
+              </button>
+            )}
             {cashRegister && (
               <button
                 className="close-cash-register-btn"
@@ -434,6 +625,17 @@ export default function AdminPOS() {
         <div className="order-panel">
           <h2 className="order-title">Orden Actual</h2>
           
+          <div className="customer-name-input" style={{ marginBottom: '15px' }}>
+            <input
+              type="text"
+              placeholder="Nombre del cliente (para etiqueta)"
+              className="form-input"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              style={{ width: '100%', padding: '10px', fontSize: '14px' }}
+            />
+          </div>
+          
           {items.length === 0 ? (
             <div className="order-empty">
               <p>No hay productos en la orden</p>
@@ -447,6 +649,7 @@ export default function AdminPOS() {
                     item={item}
                     onRemove={handleRemoveItem}
                     onUpdateQuantity={(id, qty) => updateQuantity(id, qty)}
+                    onEdit={handleEditItem}
                   />
                 ))}
               </div>
@@ -470,31 +673,42 @@ export default function AdminPOS() {
       </div>
 
       <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Seleccionar Método de Pago">
-        <div className="payment-methods">
+        <div className="payment-selection-modal">
           <button
-            className="payment-method"
+            className="payment-option-btn cash"
             onClick={() => handlePayment('efectivo')}
             disabled={processing}
           >
-            <DollarSign size={24} />
-            <span>Efectivo</span>
+            <DollarSign size={32} className="payment-option-icon" />
+            <span className="payment-option-label">Efectivo</span>
           </button>
           <button
-            className="payment-method"
+            className="payment-option-btn card"
             onClick={() => handlePayment('tarjeta')}
             disabled={processing}
           >
-            <CreditCard size={24} />
-            <span>Tarjeta</span>
+            <CreditCard size={32} className="payment-option-icon" />
+            <span className="payment-option-label">Tarjeta</span>
           </button>
           <button
-            className="payment-method"
+            className="payment-option-btn usd"
             onClick={() => handlePayment('usd')}
             disabled={processing}
             aria-label="Pagar en dólares"
           >
-            <DollarSign size={24} />
-            <span>USD</span>
+            <DollarSign size={32} className="payment-option-icon" />
+            <span className="payment-option-label">USD</span>
+          </button>
+          <button
+            className="payment-option-btn mixed"
+            onClick={() => {
+              setShowPaymentModal(false);
+              setShowMixedPaymentModal(true);
+            }}
+            disabled={processing}
+          >
+            <Smartphone size={32} className="payment-option-icon" />
+            <span className="payment-option-label">Pago Mixto</span>
           </button>
         </div>
       </Modal>
@@ -504,6 +718,14 @@ export default function AdminPOS() {
         onClose={() => setShowCashModal(false)}
         total={total}
         onConfirm={handleCashConfirm}
+      />
+
+      <DollarPaymentModal
+        isOpen={showDollarModal}
+        onClose={() => setShowDollarModal(false)}
+        total={total}
+        tipoCambio={currentTipoCambio}
+        onConfirm={handleDollarConfirm}
       />
 
       <Modal
@@ -523,6 +745,14 @@ export default function AdminPOS() {
         </div>
       </Modal>
 
+      <MixedPaymentModal
+        isOpen={showMixedPaymentModal}
+        onClose={() => setShowMixedPaymentModal(false)}
+        total={total}
+        tipoCambio={currentTipoCambio}
+        onConfirm={handleMixedPayment}
+      />
+
       {toast && (
         <Toast
           message={toast.message}
@@ -538,8 +768,11 @@ export default function AdminPOS() {
         onClose={() => {
           setShowCustomizationModal(false);
           setSelectedProduct(null);
+          setEditingItem(null);
         }}
         onConfirm={handleCustomizationConfirm}
+        existingCustomization={editingItem?.personalizaciones}
+        isEdit={!!editingItem}
       />
     </div>
   );

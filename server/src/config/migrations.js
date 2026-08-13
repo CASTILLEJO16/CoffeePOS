@@ -59,6 +59,81 @@ const migrations = [
         await run(`ALTER TABLE ventas ADD COLUMN tipo_tarjeta TEXT`);
       } catch (e) {}
     }
+  },
+  {
+    id: 7,
+    name: 'agregar_campos_dolar_a_ventas',
+    up: async () => {
+      try {
+        await run(`ALTER TABLE ventas ADD COLUMN tipo_cambio REAL`);
+      } catch (e) {}
+      try {
+        await run(`ALTER TABLE ventas ADD COLUMN monto_dolar REAL`);
+      } catch (e) {}
+      try {
+        await run(`ALTER TABLE ventas ADD COLUMN dolar_recibido REAL`);
+      } catch (e) {}
+      try {
+        await run(`ALTER TABLE ventas ADD COLUMN cambio_pesos REAL`);
+      } catch (e) {}
+    }
+  },
+  {
+    id: 8,
+    name: 'agregar_ventas_dolar_a_cajas',
+    up: async () => {
+      try {
+        await run(`ALTER TABLE cajas ADD COLUMN ventas_dolar REAL DEFAULT 0`);
+      } catch (e) {}
+      try {
+        await run(`ALTER TABLE cajas ADD COLUMN total_dolar REAL DEFAULT 0`);
+      } catch (e) {}
+    }
+  },
+  {
+    id: 9,
+    name: 'agregar_pagos_mixtos_a_ventas',
+    up: async () => {
+      try {
+        await run(`ALTER TABLE ventas ADD COLUMN efectivo_mxn REAL DEFAULT 0`);
+      } catch (e) {}
+      try {
+        await run(`ALTER TABLE ventas ADD COLUMN efectivo_usd REAL DEFAULT 0`);
+      } catch (e) {}
+      try {
+        await run(`ALTER TABLE ventas ADD COLUMN tarjeta_credito REAL DEFAULT 0`);
+      } catch (e) {}
+      try {
+        await run(`ALTER TABLE ventas ADD COLUMN tarjeta_debito REAL DEFAULT 0`);
+      } catch (e) {}
+    }
+  },
+  {
+    id: 10,
+    name: 'agregar_descuento_a_productos',
+    up: async () => {
+      try {
+        await run(`ALTER TABLE productos ADD COLUMN descuento REAL DEFAULT 0`);
+      } catch (e) {}
+    }
+  },
+  {
+    id: 11,
+    name: 'agregar_descuento_a_detalle_ventas',
+    up: async () => {
+      try {
+        await run(`ALTER TABLE detalle_ventas ADD COLUMN descuento REAL DEFAULT 0`);
+      } catch (e) {}
+    }
+  },
+  {
+    id: 12,
+    name: 'agregar_motivo_devolucion_a_ventas',
+    up: async () => {
+      try {
+        await run(`ALTER TABLE ventas ADD COLUMN motivo_devolucion TEXT`);
+      } catch (e) {}
+    }
   }
 ];
 

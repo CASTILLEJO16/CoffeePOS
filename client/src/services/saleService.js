@@ -55,6 +55,14 @@ export async function cancelSale(id) {
 }
 
 /**
+ * Devuelve una venta (requiere contraseña)
+ */
+export async function refundSale(id, password, motivo) {
+  const response = await api.post(`/ventas/${id}/devolver`, { password, motivo });
+  return response.data;
+}
+
+/**
  * Imprime un ticket
  */
 export async function printTicket(id) {

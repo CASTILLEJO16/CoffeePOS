@@ -4,21 +4,27 @@ import { useCustomizations } from '../../hooks/useCustomizations.js';
 import { formatCurrency } from '../../utils/formatCurrency.js';
 import './ProductCustomizationModal.css';
 
-export default function ProductCustomizationModal({ product, isOpen, onClose, onConfirm }) {
+export default function ProductCustomizationModal({ product, isOpen, onClose, onConfirm, existingCustomization = null, isEdit = false }) {
   const { customizations: serverCustomizations, tipos, loading } = useCustomizations();
   
   const [customization, setCustomization] = useState({});
 
-  // Inicializar
+  // Inicializar con personalizaciones existentes si estamos editando
   useEffect(() => {
     if (!loading && tipos.length > 0) {
-      const initial = {};
-      tipos.forEach(tipo => {
-        initial[tipo] = [];
-      });
-      setCustomization(initial);
+      if (isEdit && existingCustomization) {
+        // Usar personalizaciones existentes
+        setCustomization(existingCustomization);
+      } else {
+        // Inicializar vacío
+        const initial = {};
+        tipos.forEach(tipo => {
+          initial[tipo] = [];
+        });
+        setCustomization(initial);
+      }
     }
-  }, [loading, tipos]);
+  }, [loading, tipos, isEdit, existingCustomization]);
 
   if (!isOpen || !product || loading) {
     return null;
@@ -54,10 +60,12 @@ export default function ProductCustomizationModal({ product, isOpen, onClose, on
   const handleConfirm = () => {
     onConfirm(customization);
     onClose();
-    // Reset
-    const initial = {};
-    tipos.forEach(tipo => { initial[tipo] = []; });
-    setCustomization(initial);
+    // Reset solo si no estamos editando
+    if (!isEdit) {
+      const initial = {};
+      tipos.forEach(tipo => { initial[tipo] = []; });
+      setCustomization(initial);
+    }
   };
 
   const calculateExtraPrice = () => {
@@ -95,10 +103,10 @@ export default function ProductCustomizationModal({ product, isOpen, onClose, on
   }
 
   return (
-    <div className="customization-overlay" onClick={onClose}>
-      <div className="customization-modal" onClick={e => e.stopPropagation()}>
+    <div className="customization-overlay">
+      <div className="customization-modal">
         <div className="customization-header">
-          <h2 className="customization-title">Personalizar {product.nombre}</h2>
+          <h2 className="customization-title">{isEdit ? 'Editar' : 'Personalizar'} {product.nombre}</h2>
           <button type="button" className="customization-close" onClick={onClose} aria-label="Cerrar">
             <X size={20} />
           </button>
@@ -146,7 +154,7 @@ export default function ProductCustomizationModal({ product, isOpen, onClose, on
             <span className="final-price">Total: {formatCurrency(finalPrice)}</span>
           </div>
           <button className="confirm-button" onClick={handleConfirm}>
-            Agregar a la Orden
+            {isEdit ? 'Actualizar' : 'Agregar a la Orden'}
           </button>
         </div>
       </div>

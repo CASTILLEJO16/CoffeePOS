@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 import './Configuracion.css';
 
 export default function Configuracion() {
-  const [config, setConfig] = useState({ permitir_stock_negativo: '0' });
+  const [config, setConfig] = useState({ permitir_stock_negativo: '0', tipo_cambio_dolar: '20.00', imprimir_etiquetas: '1' });
   const [cajas, setCajas] = useState([]);
   const [nuevaCaja, setNuevaCaja] = useState('');
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,9 @@ export default function Configuracion() {
 
   async function handleSaveConfig() {
     try {
+      console.log('[Configuracion] Enviando configuración al backend:', config);
       await updateConfig(config);
+      console.log('[Configuracion] Configuración guardada exitosamente');
 
       // 🔁 Volver a pedir configuración REAL del backend
       const fresh = await getAllConfig();
@@ -63,13 +65,15 @@ export default function Configuracion() {
         });
       }
 
-      // Notificar a todo el sistema
+      // Notificar a todo el sistema usando localStorage (funciona entre pestañas)
+      console.log('[Configuracion] Guardando timestamp de actualización en localStorage');
+      localStorage.setItem('config_updated_at', Date.now().toString());
+      
+      console.log('[Configuracion] Disparando evento ivaUpdated');
       window.dispatchEvent(new Event('ivaUpdated'));
+      console.log('[Configuracion] Disparando evento configUpdated');
+      window.dispatchEvent(new Event('configUpdated'));
 
-      // ✅ Forzar sincronización total (evita desfaces)
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
       Swal.fire({
         title: '¡Guardado!',
         text: 'La configuración se actualizó correctamente.',
@@ -78,6 +82,7 @@ export default function Configuracion() {
         showConfirmButton: false
       });
     } catch (error) {
+      console.error('[Configuracion] Error al guardar configuración:', error);
       Swal.fire('Error', 'No se pudo guardar la configuración', 'error');
     }
   }
@@ -161,6 +166,20 @@ export default function Configuracion() {
                 }}
               />
             </div>
+            <div className="form-group">
+              <label className="form-label">Tipo de Cambio Dólar (MXN)</label>
+              <input
+                type="number"
+                step="0.01"
+                className="form-input"
+                value={config.tipo_cambio_dolar !== undefined && config.tipo_cambio_dolar !== '' ? config.tipo_cambio_dolar : ''}
+                onChange={(e) => setConfig(prev => ({ ...prev, tipo_cambio_dolar: e.target.value }))}
+                placeholder="Ej: 20.00"
+              />
+              <p style={{fontSize: '0.85rem', color: '#666', marginTop: '5px'}}>
+                Tipo de cambio para pagos en dólares (1 USD = X MXN)
+              </p>
+            </div>
           </div>
         </div>
 
@@ -197,6 +216,32 @@ export default function Configuracion() {
             </div>
             <p style={{fontSize: '0.85rem', color: '#666', marginTop: '-10px', paddingLeft: '30px'}}>
               Los vendedores podrán vender el producto pero el stock se irá haciendo negativo.
+            </p>
+
+            <button className="save-button" onClick={handleSaveConfig} style={{marginTop: 15}}>
+              <Save size={18} style={{marginRight: 8}} />
+              Guardar Ajustes
+            </button>
+          </div>
+        </div>
+
+        <div className="config-section">
+          <h2 className="section-title"><FileText size={18} style={{marginRight: 8}} />Impresión de Etiquetas</h2>
+          <div className="config-form">
+            <div className="form-group" style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <input 
+                type="checkbox"
+                id="imprimir_etiquetas"
+                style={{width: 20, height: 20, cursor: 'pointer'}}
+                checked={config.imprimir_etiquetas === '1' || config.imprimir_etiquetas === 'true'}
+                onChange={(e) => setConfig({ ...config, imprimir_etiquetas: e.target.checked ? '1' : '0' })}
+              />
+              <label htmlFor="imprimir_etiquetas" className="form-label" style={{marginBottom: 0, cursor: 'pointer'}}>
+                Imprimir etiquetas automáticamente
+              </label>
+            </div>
+            <p style={{fontSize: '0.85rem', color: '#666', marginTop: '-10px', marginBottom: '20px', paddingLeft: '30px'}}>
+              Imprimirá una etiqueta por cada producto automáticamente al completar la venta. Las etiquetas incluyen el nombre del cliente y personalizaciones.
             </p>
 
             <button className="save-button" onClick={handleSaveConfig} style={{marginTop: 15}}>

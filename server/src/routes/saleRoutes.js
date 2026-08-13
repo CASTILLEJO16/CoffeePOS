@@ -18,6 +18,7 @@ router.get('/kpis', requireAdmin, saleController.getSalesKPIs);
 // Rutas con parámetros (deben ir al final)
 router.get('/:id', requireSellerOrAdmin, saleController.getSale);
 router.post('/:id/imprimir', requireSellerOrAdmin, saleController.printTicket);
+router.post('/:id/devolver', requireSellerOrAdmin, saleController.refundSale);
 router.post('/:id/cancelar', requireAdmin, saleController.cancelSale);
 
 export default router;

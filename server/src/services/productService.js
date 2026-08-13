@@ -216,3 +216,21 @@ export async function getCategories() {
     throw error;
   }
 }
+
+/**
+ * Aplica descuento a un producto
+ * @param {number} id - ID del producto
+ * @param {number} descuento - Porcentaje de descuento (0-100)
+ * @param {number} usuarioId - ID del usuario que aplica el descuento
+ */
+export async function applyProductDiscount(id, descuento, usuarioId = null) {
+  try {
+    const product = await getProductById(id);
+    await run('UPDATE productos SET descuento = ? WHERE id = ?', [descuento, id]);
+
+    await logAction(usuarioId, 'APLICAR_DESCUENTO', `Descuento ${descuento}% aplicado al producto: ${product.nombre}`);
+  } catch (error) {
+    console.error('Error al aplicar descuento:', error);
+    throw error;
+  }
+}

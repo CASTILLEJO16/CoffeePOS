@@ -3,6 +3,7 @@ import Modal from '../common/Modal.jsx';
 import Button from '../common/Button.jsx';
 import Input from '../common/Input.jsx';
 import { formatCurrency } from '../../utils/formatCurrency.js';
+import './PaymentModals.css';
 
 export default function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
   console.log('[CashPaymentModal] render', { isOpen, total });
@@ -74,34 +75,47 @@ export default function CashPaymentModal({ isOpen, onClose, total, onConfirm }) 
   }, [total, received]);
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Pago en efectivo" size="extra-large">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Pago en efectivo"
+      size="extra-large"
+      footer={
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+          <Button onClick={handleClose} className="modal-action-btn cancel">Cancelar</Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={difference < 0 || submitting}
+            className="modal-action-btn confirm"
+          >
+            Cobrar
+          </Button>
+        </div>
+      }
+    >
       <div style={{ display: 'flex', gap: 24 }}>
         {/* LEFT PANEL */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 14, opacity: 0.7 }}>Total de la venta</div>
-            <div style={{ fontSize: 34, fontWeight: '700' }}>{formatCurrency(total)}</div>
+          <div className="amount-section">
+            <span className="amount-label">Total de la venta</span>
+            <span className="amount-value">{formatCurrency(total)}</span>
           </div>
 
-          <div>
-            <div style={{ fontSize: 14, opacity: 0.7 }}>Monto recibido</div>
-            <div style={{ fontSize: 34, fontWeight: '700' }}>{formatCurrency(received)}</div>
+          <div className="amount-section">
+            <span className="amount-label">Monto recibido</span>
+            <span className="amount-value primary">{formatCurrency(received)}</span>
           </div>
 
-          <div>
+          <div className="amount-section">
             {difference >= 0 ? (
               <>
-                <div style={{ fontSize: 14, opacity: 0.7 }}>Cambio</div>
-                <div style={{ fontSize: 30, fontWeight: '700', color: '#16a34a' }}>
-                  {formatCurrency(difference)}
-                </div>
+                <span className="amount-label">Cambio</span>
+                <span className="amount-value success">{formatCurrency(difference)}</span>
               </>
             ) : (
               <>
-                <div style={{ fontSize: 14, opacity: 0.7 }}>Faltan</div>
-                <div style={{ fontSize: 30, fontWeight: '700', color: '#dc2626' }}>
-                  {formatCurrency(Math.abs(difference))}
-                </div>
+                <span className="amount-label">Faltan</span>
+                <span className="amount-value danger">{formatCurrency(Math.abs(difference))}</span>
               </>
             )}
           </div>
@@ -110,13 +124,13 @@ export default function CashPaymentModal({ isOpen, onClose, total, onConfirm }) 
         {/* RIGHT PANEL */}
         <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* QUICK ACTIONS */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div className="quick-actions">
             <button
               onClick={() => {
                 setMode('manual');
                 setManualAmount(String(total.toFixed(2)));
               }}
-              style={{ padding: '10px 14px', borderRadius: 8, border: '2px solid #4f46e5', background: '#4f46e5', color: '#fff', fontWeight: 700 }}
+              className="quick-action-btn primary"
             >
               Exacto
             </button>
@@ -124,29 +138,22 @@ export default function CashPaymentModal({ isOpen, onClose, total, onConfirm }) 
               <button
                 key={i}
                 onClick={() => addDenomination(s)}
-                style={{ padding: '10px 14px', borderRadius: 8, border: '2px solid #374151', background: '#374151', color: '#fff', fontWeight: 600 }}
+                className="quick-action-btn"
               >
                 +${s}
               </button>
             ))}
           </div>
+
           {/* BILLS */}
           <div>
             <div style={{ marginBottom: 8, fontSize: 13, opacity: 0.7 }}>Billetes</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            <div className="denominations-grid">
               {bills.map(v => (
                 <button
                   key={v}
                   onClick={() => addDenomination(v)}
-                  style={{
-                    padding: 22,
-                    fontSize: 18,
-                    fontWeight: 700,
-                    borderRadius: 10,
-                    border: '2px solid #111827',
-                    background: '#111827',
-                    color: '#ffffff'
-                  }}
+                  className="denomination-btn"
                 >
                   ${v}
                 </button>
@@ -157,20 +164,12 @@ export default function CashPaymentModal({ isOpen, onClose, total, onConfirm }) 
           {/* COINS */}
           <div>
             <div style={{ marginBottom: 8, fontSize: 13, opacity: 0.7 }}>Monedas</div>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div className="coins-container">
               {coins.map(v => (
                 <button
                   key={v}
                   onClick={() => addDenomination(v)}
-                  style={{
-                    width: 70,
-                    height: 70,
-                    borderRadius: '50%',
-                    fontWeight: 700,
-                    border: '2px solid #1f2937',
-                    background: '#1f2937',
-                    color: '#ffffff'
-                  }}
+                  className="coin-btn"
                 >
                   ${v}
                 </button>
@@ -185,21 +184,10 @@ export default function CashPaymentModal({ isOpen, onClose, total, onConfirm }) 
               placeholder="Ej: 200"
               value={manualAmount}
               onChange={handleManualChange}
+              className="payment-input"
             />
           </div>
         </div>
-      </div>
-
-      {/* ACTIONS */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24 }}>
-        <Button onClick={handleClose}>Cancelar</Button>
-        <Button
-          onClick={handleConfirm}
-          disabled={difference < 0 || submitting}
-          style={{ fontSize: 18, padding: '14px 24px' }}
-        >
-          Cobrar
-        </Button>
       </div>
     </Modal>
   );

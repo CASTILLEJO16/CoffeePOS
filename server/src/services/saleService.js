@@ -322,18 +322,49 @@ export async function createSale(saleData, usuarioId = null) {
     // Insertar venta con caja_id y hora de Tijuana
     const fecha = nowInTijuanaSQL();
     console.log('🔍 Creando venta con fecha:', fecha);
+    
+    // Manejar pagos en dólar
+    let tipoCambio = null;
+    let montoDolar = null;
+    let dolarRecibido = null;
+    let cambioPesos = null;
+
+    // Manejar pagos mixtos
+    let efectivoMxn = 0;
+    let efectivoUsd = 0;
+    let tarjetaCredito = 0;
+    let tarjetaDebito = 0;
+
+    if (metodo_pago === 'dolar') {
+      tipoCambio = saleData.tipo_cambio || 20.00;
+      montoDolar = Number((total / tipoCambio).toFixed(2));
+      dolarRecibido = saleData.dolar_recibido || montoDolar;
+      cambioPesos = Number(((dolarRecibido - montoDolar) * tipoCambio).toFixed(2));
+    } else if (metodo_pago === 'mixto') {
+      tipoCambio = saleData.tipo_cambio || 20.00;
+      efectivoMxn = saleData.efectivo_mxn || 0;
+      efectivoUsd = saleData.efectivo_usd || 0;
+      tarjetaCredito = saleData.tarjeta_credito || 0;
+      tarjetaDebito = saleData.tarjeta_debito || 0;
+      cambioPesos = saleData.cambio_pesos || 0;
+    }
+
     const saleResult = await run(
-      'INSERT INTO ventas (subtotal, impuestos, total, metodo_pago, tipo_tarjeta, usuario_id, caja_id, fecha, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [subtotal, impuestos, total, metodo_pago, saleData.tipo_tarjeta || null, usuarioId, openCashRegister.id, fecha, branchId]
+      'INSERT INTO ventas (subtotal, impuestos, total, metodo_pago, tipo_tarjeta, usuario_id, caja_id, fecha, branch_id, tipo_cambio, monto_dolar, dolar_recibido, cambio_pesos, efectivo_mxn, efectivo_usd, tarjeta_credito, tarjeta_debito) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [subtotal, impuestos, total, metodo_pago, saleData.tipo_tarjeta || null, usuarioId, openCashRegister.id, fecha, branchId, tipoCambio, montoDolar, dolarRecibido, cambioPesos, efectivoMxn, efectivoUsd, tarjetaCredito, tarjetaDebito]
     );
 
     const ventaId = saleResult.id;
 
     // Insertar detalles
     for (const item of processedItems) {
+      // Obtener descuento del producto
+      const product = await queryOne('SELECT descuento FROM productos WHERE id = ?', [item.producto_id]);
+      const descuento = product ? (product.descuento || 0) : 0;
+
       await run(
-        'INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, precio, importe, personalizaciones) VALUES (?, ?, ?, ?, ?, ?)',
-        [ventaId, item.producto_id, item.cantidad, item.precio, item.importe, item.personalizaciones]
+        'INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, precio, importe, personalizaciones, descuento) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [ventaId, item.producto_id, item.cantidad, item.precio, item.importe, item.personalizaciones, descuento]
       );
     }
 
@@ -752,6 +783,55 @@ export async function getSalesKPIs(period = 'day', startDate = null, endDate = n
     return result;
   } catch (error) {
     console.error('Error al obtener KPIs de ventas:', error);
+    throw error;
+  }
+}
+
+/**
+ * Devuelve una venta
+ * @param {number} saleId - ID de la venta a devolver
+ * @param {number} userId - ID del usuario que realiza la devolución
+ * @param {string} motivo - Motivo de la devolución
+ */
+export async function refundSale(saleId, userId, motivo = '') {
+  try {
+    await run('BEGIN TRANSACTION');
+
+    // Obtener la venta
+    const sale = await getSaleById(saleId);
+    if (!sale) {
+      throw new Error('Venta no encontrada');
+    }
+
+    if (sale.cancelada === 1) {
+      throw new Error('La venta ya está cancelada');
+    }
+
+    // Marcar la venta como cancelada
+    await run(
+      'UPDATE ventas SET cancelada = 1, motivo_devolucion = ? WHERE id = ?',
+      [motivo || 'Devolución solicitada', saleId]
+    );
+
+    // Si la venta está asociada a una caja, actualizar el total de devoluciones
+    if (sale.caja_id) {
+      const cashRegister = await queryOne('SELECT total_devoluciones FROM cajas WHERE id = ?', [sale.caja_id]);
+      if (cashRegister) {
+        await run(
+          'UPDATE cajas SET total_devoluciones = ? WHERE id = ?',
+          [(cashRegister.total_devoluciones || 0) + sale.total, sale.caja_id]
+        );
+      }
+    }
+
+    // Registrar la devolución en el log
+    await logAction(userId, 'DEVOLUCION_VENTA', `Venta devuelta: #${saleId}, Total: $${sale.total}, Motivo: ${motivo}`);
+
+    await run('COMMIT');
+    return sale;
+  } catch (error) {
+    await run('ROLLBACK');
+    console.error('Error al devolver venta:', error);
     throw error;
   }
 }

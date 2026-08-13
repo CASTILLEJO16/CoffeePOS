@@ -131,6 +131,51 @@ export async function cancelSale(req, res) {
 }
 
 /**
+ * Devuelve una venta (requiere autorización con contraseña)
+ */
+export async function refundSale(req, res) {
+  try {
+    const { id } = req.params;
+    const { password, motivo } = req.body;
+    const userId = req.user?.userId;
+    const role = req.user?.role;
+
+    // Verificar que se proporcionó la contraseña
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Se requiere la contraseña para autorizar la devolución'
+      });
+    }
+
+    // Verificar la contraseña del usuario
+    const { verifyUserPassword } = await import('../services/authService.js');
+    const passwordValid = await verifyUserPassword(userId, password);
+
+    if (!passwordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Contraseña incorrecta'
+      });
+    }
+
+    // Realizar la devolución
+    await saleService.refundSale(id, userId, motivo);
+
+    res.json({
+      success: true,
+      message: 'Venta devuelta correctamente'
+    });
+  } catch (error) {
+    console.error('Error en refundSale:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+/**
  * Genera e imprime un ticket
  */
 export async function printTicket(req, res) {

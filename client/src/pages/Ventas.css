@@ -100,3 +100,39 @@
   background: var(--color-warning-light);
   color: var(--color-warning-text);
 }
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: var(--border-radius-lg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.status-badge.completed {
+  background: var(--color-success-light);
+  color: var(--color-success-text);
+}
+
+.status-badge.cancelled {
+  background: var(--color-danger-light);
+  color: var(--color-danger-text);
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.row-actions button {
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.row-actions button:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-primary);
+}

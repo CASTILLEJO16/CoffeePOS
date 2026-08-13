@@ -23,10 +23,11 @@ import {
   ShoppingBag,
   Filter,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getSales, getSaleById } from '../services/saleService.js';
+import { getSales, getSaleById, refundSale } from '../services/saleService.js';
 import { getOpenCashRegister } from '../services/cashRegisterService.js';
 import { printTicket } from '../services/ticketService.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
@@ -149,6 +150,12 @@ export default function VentasVendedor() {
 
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Estado para modal de devolución
+  const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [refundPassword, setRefundPassword] = useState('');
+  const [refundMotivo, setRefundMotivo] = useState('');
+  const [refundError, setRefundError] = useState('');
 
   const goalKey = `seller_daily_goal_${user?.id || user?.userId || 'default'}`;
   const [dailyGoal, setDailyGoal] = useState(() => {
@@ -379,6 +386,39 @@ export default function VentasVendedor() {
   async function handleDownload(venta) {
     // Usa el ticket imprimible; el usuario puede guardar como PDF desde el navegador
     await handleReprint(venta);
+  }
+
+  function handleOpenRefundModal(venta) {
+    setVentaSeleccionada(venta);
+    setRefundModalOpen(true);
+    setRefundPassword('');
+    setRefundMotivo('');
+    setRefundError('');
+  }
+
+  function handleCloseRefundModal() {
+    setRefundModalOpen(false);
+    setRefundPassword('');
+    setRefundMotivo('');
+    setRefundError('');
+    setVentaSeleccionada(null);
+  }
+
+  async function handleRefund() {
+    if (!ventaSeleccionada) return;
+    
+    setActionLoading(true);
+    setRefundError('');
+
+    try {
+      await refundSale(ventaSeleccionada.id, refundPassword, refundMotivo);
+      handleCloseRefundModal();
+      loadData(); // Recargar ventas
+    } catch (err) {
+      setRefundError(err.response?.data?.error || 'Error al procesar la devolución');
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   function handleSaveGoal() {
@@ -895,7 +935,9 @@ export default function VentasVendedor() {
                     </td>
                     <td data-label="Total" className="total-cell">{formatCurrency(venta.total)}</td>
                     <td data-label="Estado">
-                      <span className="status-chip completed">Completada</span>
+                      <span className={`status-chip ${venta.cancelada ? 'cancelled' : 'completed'}`}>
+                        {venta.cancelada ? 'Cancelada' : 'Completada'}
+                      </span>
                     </td>
                     <td data-label="Acciones">
                       <div className="row-actions">
@@ -920,6 +962,15 @@ export default function VentasVendedor() {
                         >
                           <Download size={16} />
                         </button>
+                        {!venta.cancelada && (
+                          <button
+                            type="button"
+                            title="Devolver venta"
+                            onClick={() => handleOpenRefundModal(venta)}
+                          >
+                            <RotateCcw size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -930,8 +981,127 @@ export default function VentasVendedor() {
         )}
       </section>
 
+      {/* Modal de Devolución */}
       <Modal
-        isOpen={!!ventaSeleccionada}
+        isOpen={refundModalOpen}
+        onClose={handleCloseRefundModal}
+        title="Devolver Venta"
+        size="medium"
+        footer={
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={handleCloseRefundModal}
+              disabled={actionLoading}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: '2px solid var(--color-border)',
+                background: 'var(--color-surface)',
+                cursor: actionLoading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleRefund}
+              disabled={actionLoading || !refundPassword}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'var(--color-danger)',
+                color: 'white',
+                cursor: actionLoading || !refundPassword ? 'not-allowed' : 'pointer',
+                opacity: actionLoading || !refundPassword ? 0.5 : 1
+              }}
+            >
+              {actionLoading ? 'Procesando...' : 'Devolver'}
+            </button>
+          </div>
+        }
+      >
+        {ventaSeleccionada && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ background: 'var(--color-surface-muted)', padding: '16px', borderRadius: '8px' }}>
+              <div style={{ marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                Venta #{ventaSeleccionada.id}
+              </div>
+              <div style={{ fontSize: '13px', opacity: 0.8 }}>
+                Total: {formatCurrency(ventaSeleccionada.total)}
+              </div>
+              <div style={{ fontSize: '13px', opacity: 0.8 }}>
+                Cliente: {ventaSeleccionada.cliente || 'Cliente general'}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                Contraseña de autorización
+              </label>
+              <input
+                type="password"
+                value={refundPassword}
+                onChange={(e) => setRefundPassword(e.target.value)}
+                placeholder="Ingresa tu contraseña"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '2px solid var(--color-border)',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                Motivo de la devolución (opcional)
+              </label>
+              <textarea
+                value={refundMotivo}
+                onChange={(e) => setRefundMotivo(e.target.value)}
+                placeholder="Describe el motivo de la devolución..."
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '2px solid var(--color-border)',
+                  fontSize: '14px',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            {refundError && (
+              <div style={{
+                padding: '12px',
+                borderRadius: '8px',
+                background: 'var(--color-danger-light)',
+                color: 'var(--color-danger)',
+                fontSize: '14px'
+              }}>
+                {refundError}
+              </div>
+            )}
+
+            <div style={{
+              padding: '12px',
+              borderRadius: '8px',
+              background: 'var(--color-warning-light)',
+              color: 'var(--color-warning)',
+              fontSize: '13px'
+            }}>
+              ⚠️ Esta acción cancelará la venta y descontará el monto de la caja. Esta acción no se puede deshacer.
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={!!ventaSeleccionada && !refundModalOpen}
         onClose={() => setVentaSeleccionada(null)}
         title={ventaSeleccionada ? `Ticket #${ventaSeleccionada.id}` : 'Detalle'}
         size="large"

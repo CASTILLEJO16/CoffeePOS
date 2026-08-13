@@ -42,7 +42,59 @@ export function formatReceiptESCPOS(sale, options = { width: 32, storeName: 'COF
   ticket += `${ESC_POS_COMMANDS.ALIGN_LEFT}`;
   ticket += `Ticket #: ${sale.id || 'N/A'}\n`;
   ticket += `Atendió: ${sale.usuario_nombre || 'Cajero'}\n`;
-  ticket += `Pago: ${sale.metodo_pago ? sale.metodo_pago.toUpperCase() : 'EFECTIVO'}\n`;
+  ticket += `Fecha: ${sale.fecha ? new Date(sale.fecha).toLocaleString('es-MX') : new Date().toLocaleString('es-MX')}\n`;
+  ticket += `${divider}\n`;
+
+  // Desglose de métodos de pago
+  if (sale.metodo_pago === 'mixto') {
+    ticket += `MÉTODO DE PAGO: MIXTO\n`;
+    ticket += `${divider}\n`;
+
+    if (sale.efectivo_mxn > 0) {
+      ticket += padRow('Efectivo MXN:', `$${Number(sale.efectivo_mxn).toFixed(2)}`, width) + '\n';
+    }
+    if (sale.efectivo_usd > 0) {
+      const usdToMxn = sale.efectivo_usd * (sale.tipo_cambio || 20);
+      ticket += padRow(`Efectivo USD:`, `$${Number(sale.efectivo_usd).toFixed(2)}`, width) + '\n';
+      ticket += padRow(`  (= MXN):`, `$${usdToMxn.toFixed(2)}`, width) + '\n';
+    }
+    if (sale.tarjeta_credito > 0) {
+      ticket += padRow('Tarjeta Crédito:', `$${Number(sale.tarjeta_credito).toFixed(2)}`, width) + '\n';
+    }
+    if (sale.tarjeta_debito > 0) {
+      ticket += padRow('Tarjeta Débito:', `$${Number(sale.tarjeta_debito).toFixed(2)}`, width) + '\n';
+    }
+
+    if (sale.tipo_cambio) {
+      ticket += `${divider}\n`;
+      ticket += padRow('Tipo de Cambio:', `1 USD = $${sale.tipo_cambio.toFixed(2)}`, width) + '\n';
+    }
+  } else if (sale.metodo_pago === 'dolar') {
+    ticket += `MÉTODO DE PAGO: USD\n`;
+    ticket += `${divider}\n`;
+    if (sale.monto_dolar) {
+      ticket += padRow('Monto USD:', `$${Number(sale.monto_dolar).toFixed(2)}`, width) + '\n';
+    }
+    if (sale.dolar_recibido) {
+      ticket += padRow('Recibido USD:', `$${Number(sale.dolar_recibido).toFixed(2)}`, width) + '\n';
+    }
+    if (sale.cambio_pesos !== null && sale.cambio_pesos !== undefined) {
+      ticket += padRow('Cambio MXN:', `$${Number(sale.cambio_pesos).toFixed(2)}`, width) + '\n';
+    }
+    if (sale.tipo_cambio) {
+      ticket += `${divider}\n`;
+      ticket += padRow('Tipo de Cambio:', `1 USD = $${sale.tipo_cambio.toFixed(2)}`, width) + '\n';
+    }
+  } else if (sale.metodo_pago === 'tarjeta') {
+    ticket += `MÉTODO DE PAGO: TARJETA\n`;
+    if (sale.tipo_tarjeta) {
+      ticket += `${divider}\n`;
+      ticket += padRow('Tipo:', sale.tipo_tarjeta.toUpperCase(), width) + '\n';
+    }
+  } else {
+    ticket += `MÉTODO DE PAGO: ${sale.metodo_pago ? sale.metodo_pago.toUpperCase() : 'EFECTIVO'}\n`;
+  }
+
   ticket += `${divider}\n`;
 
   // Encabezado de la tabla de productos
@@ -58,6 +110,12 @@ export function formatReceiptESCPOS(sale, options = { width: 32, storeName: 'COF
 
       const lineName = `${cant}${nombre}`;
       ticket += padRow(lineName, itemTotal, width) + '\n';
+
+      // Descuento
+      if (item.descuento && item.descuento > 0) {
+        const discountAmount = Number(item.precio || 0) * (item.descuento / 100) * Number(item.cantidad || 1);
+        ticket += padRow(`  Descuento (${item.descuento}%)`, `-$${discountAmount.toFixed(2)}`, width) + '\n';
+      }
 
       // Personalizaciones / Extras
       if (item.personalizaciones) {

@@ -8,7 +8,6 @@ const router = express.Router();
 // Rutas públicas (para el POS)
 router.get('/', productController.getProducts);
 router.get('/categorias', productController.getCategories);
-router.get('/:id', productController.getProduct);
 
 // Rutas protegidas (requieren autenticación)
 router.use(authenticateToken);
@@ -19,6 +18,10 @@ router.post('/', requireAdmin, upload.single('imagen'), productController.create
 router.put('/:id', requireAdmin, upload.single('imagen'), productController.updateProduct);
 router.patch('/:id/activar', requireAdmin, productController.activateProduct);
 router.patch('/:id/desactivar', requireAdmin, productController.deactivateProduct);
+router.patch('/:id/descuento', requireAdmin, productController.applyProductDiscount);
 router.delete('/:id', requireAdmin, productController.deleteProduct);
+
+// Ruta pública para obtener producto por ID (debe ir al final)
+router.get('/:id', productController.getProduct);
 
 export default router;

@@ -239,3 +239,44 @@ export async function getCategories(req, res) {
     });
   }
 }
+
+/**
+ * Aplica descuento a un producto
+ */
+export async function applyProductDiscount(req, res) {
+  try {
+    const { id } = req.params;
+    const { descuento } = req.body;
+    const userId = req.user?.userId;
+
+    if (descuento === undefined || descuento === null) {
+      return res.status(400).json({
+        success: false,
+        error: 'El porcentaje de descuento es requerido'
+      });
+    }
+
+    if (descuento < 0 || descuento > 100) {
+      return res.status(400).json({
+        success: false,
+        error: 'El descuento debe estar entre 0 y 100'
+      });
+    }
+
+    await productService.applyProductDiscount(id, descuento, userId);
+
+    // Registrar aplicación de descuento
+    await logAction(userId, 'APLICAR_DESCUENTO', `Descuento ${descuento}% aplicado al producto ID ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Descuento aplicado correctamente'
+    });
+  } catch (error) {
+    console.error('Error en applyProductDiscount:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}

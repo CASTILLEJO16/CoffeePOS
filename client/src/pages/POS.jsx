@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatBusinessTime } from '../utils/dateTime.js';
+import { formatCurrency } from '../utils/formatCurrency.js';
 import { Coffee, Search, DollarSign, CreditCard, Smartphone, X, Sun, Moon, LogOut } from 'lucide-react';
-import BranchSelector from '../components/common/BranchSelector.jsx';
 import { useOrder } from '../context/OrderContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { getProducts } from '../services/productService.js';
 import api from '../services/api.js';
 import { createSale } from '../services/saleService.js';
 import { printTicket } from '../services/ticketService.js';
+import { printLabels } from '../services/labelService.js';
 import { getOpenCashRegister } from '../services/cashRegisterService.js';
+import { getAllConfig } from '../services/configService.js';
 import { DEFAULT_CATEGORIES, getCategories } from '../utils/constants.js';
 import ProductCard from '../components/pos/ProductCard.jsx';
 import OrderItem from '../components/pos/OrderItem.jsx';
@@ -18,12 +20,15 @@ import Modal from '../components/common/Modal.jsx';
 import Toast from '../components/common/Toast.jsx';
 import ProductCustomizationModal from '../components/pos/ProductCustomizationModal.jsx';
 import CashPaymentModal from '../components/pos/CashPaymentModal.jsx';
+import DollarPaymentModal from '../components/pos/DollarPaymentModal.jsx';
+import MixedPaymentModal from '../components/pos/MixedPaymentModal.jsx';
 import { useToast } from '../hooks/useToast.js';
 import Swal from 'sweetalert2';
 import './POS.css';
 
 export default function POS() {
-  const { items, subtotal, impuestos, total, addItem, removeItem, updateQuantity, clearOrder, recalcTotals } = useOrder();
+  const { items, subtotal, impuestos, total, addItem, removeItem, updateQuantity, clearOrder, recalcTotals, customerName, setCustomerName, updateItem } = useOrder();
+  console.log('[POS] Estado de la orden - Items:', items.length, 'Subtotal:', subtotal, 'Impuestos:', impuestos, 'Total:', total);
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
@@ -34,13 +39,22 @@ export default function POS() {
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
+  const [showDollarModal, setShowDollarModal] = useState(false);
+  const [showCardTypeModal, setShowCardTypeModal] = useState(false);
+  const [showMixedPaymentModal, setShowMixedPaymentModal] = useState(false);
+  const [currentTipoCambio, setCurrentTipoCambio] = useState(20.00); // Valor específico para el modal actual
   const [processing, setProcessing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null); // Para edición de items existentes
   const [cashRegister, setCashRegister] = useState(null);
-  const [tipoCambio, setTipoCambio] = useState(18);
+  const [tipoCambio, setTipoCambio] = useState(20.00);
   const [ivaRate, setIvaRate] = useState(0.16);
+  const [imprimirEtiquetas, setImprimirEtiquetas] = useState(true);
   const { toast, showToast, hideToast } = useToast();
+
+  // Log inicial para depurar
+  console.log('[POS] Componente montado - tipoCambio inicial:', 20.00);
   
   // Atajos de teclado (modo POS rápido)
   useEffect(() => {
@@ -76,6 +90,7 @@ export default function POS() {
     loadCashRegister();
     loadTipoCambio();
     loadIVA();
+    loadLabelConfig();
   }, []);
 
   // Escuchar cambios de IVA en vivo
@@ -88,13 +103,48 @@ export default function POS() {
     return () => window.removeEventListener('ivaUpdated', handleIVAUpdate);
   }, []);
 
+  // Escuchar cambios de configuración (tipo de cambio) usando localStorage (funciona entre pestañas)
+  useEffect(() => {
+    function handleConfigUpdate() {
+      console.log('[POS] Evento configUpdated recibido, recargando tipo de cambio...');
+      loadTipoCambio();
+      loadLabelConfig();
+    }
+    
+    function handleStorageChange(e) {
+      if (e.key === 'config_updated_at') {
+        console.log('[POS] Cambio en localStorage detectado, recargando tipo de cambio...');
+        loadTipoCambio();
+        loadLabelConfig();
+      }
+    }
+    
+    window.addEventListener('configUpdated', handleConfigUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('configUpdated', handleConfigUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   async function loadTipoCambio() {
     try {
-      const res = await fetch('/api/configuracion');
-      const json = await res.json();
-      const tc = json?.data?.tipo_cambio;
-      if (tc) setTipoCambio(parseFloat(tc));
-    } catch {}
+      console.log('[POS] loadTipoCambio - Iniciando carga de tipo de cambio...');
+      const config = await getAllConfig();
+      console.log('[POS] loadTipoCambio - Respuesta completa:', config);
+      const tc = config?.tipo_cambio_dolar;
+      console.log('[POS] loadTipoCambio - Tipo de cambio extraído:', tc);
+      if (tc) {
+        const parsed = parseFloat(tc);
+        console.log('[POS] loadTipoCambio - Tipo de cambio parseado:', parsed);
+        setTipoCambio(parsed);
+        console.log('[POS] loadTipoCambio - Estado tipoCambio actualizado a:', parsed);
+      } else {
+        console.warn('[POS] loadTipoCambio - No se encontró tipo_cambio_dolar en la respuesta');
+      }
+    } catch (error) {
+      console.error('[POS] Error cargando tipo de cambio:', error);
+    }
   }
 
   async function loadIVA() {
@@ -108,6 +158,16 @@ export default function POS() {
       }
     } catch (e) {
       console.error('Error cargando IVA', e);
+    }
+  }
+
+  async function loadLabelConfig() {
+    try {
+      const config = await getAllConfig();
+      const imprimirEtiquetasConfig = config?.imprimir_etiquetas;
+      setImprimirEtiquetas(imprimirEtiquetasConfig === '1' || imprimirEtiquetasConfig === 'true');
+    } catch (error) {
+      console.error('Error cargando configuración de etiquetas:', error);
     }
   }
 
@@ -152,9 +212,28 @@ export default function POS() {
   }
 
   function handleCustomizationConfirm(customization) {
-    if (selectedProduct) {
+    if (editingItem) {
+      // Estamos editando un item existente
+      updateItem(editingItem.uniqueId, customization);
+      setEditingItem(null);
+    } else if (selectedProduct) {
+      // Estamos agregando un nuevo producto
       addItem(selectedProduct, customization);
     }
+    setShowCustomizationModal(false);
+    setSelectedProduct(null);
+  }
+
+  function handleEditItem(item) {
+    setEditingItem(item);
+    setSelectedProduct({
+      id: item.producto_id,
+      nombre: item.producto_nombre,
+      precio: item.precio_base,
+      categoria: '', // Podríamos guardar esto en el item si es necesario
+      descuento: item.descuento
+    });
+    setShowCustomizationModal(true);
   }
 
   function handleRemoveItem(uniqueId) {
@@ -178,6 +257,27 @@ export default function POS() {
         console.log('[POS] Opening CashPaymentModal');
         setShowPaymentModal(false);
         setShowCashModal(true);
+        return;
+      }
+
+      if (method === 'usd') {
+        console.log('[POS] Opening DollarPaymentModal - Recargando tipo de cambio antes de abrir modal');
+        console.log('[POS] Estado actual de la orden - Subtotal:', subtotal, 'Impuestos:', impuestos, 'Total:', total);
+        await loadTipoCambio(); // Recargar tipo de cambio antes de abrir el modal
+        const config = await getAllConfig();
+        const tc = config?.tipo_cambio_dolar;
+        const parsedTc = tc ? parseFloat(tc) : 20.00;
+        console.log('[POS] DollarPaymentModal - Tipo de cambio cargado:', parsedTc);
+        setCurrentTipoCambio(parsedTc); // Actualizar el valor específico para este modal
+        console.log('[POS] Valor que se pasará al modal - Total:', total);
+        setShowPaymentModal(false);
+        setShowDollarModal(true);
+        return;
+      }
+
+      if (method === 'tarjeta') {
+        setShowPaymentModal(false);
+        setShowCardTypeModal(true);
         return;
       }
 
@@ -217,11 +317,155 @@ export default function POS() {
       window.dispatchEvent(new Event('saleCreated'));
       
       // Imprimir ticket
-      printTicket(sale);
+      printTicket(sale, customerName);
+      
+      // Imprimir etiquetas automáticamente si está activado
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
       
       clearOrder();
+      setCustomerName('');
       setShowPaymentModal(false);
       
+      Swal.fire({
+        title: '¡Venta Exitosa!',
+        text: 'La venta se ha procesado correctamente.',
+        icon: 'success',
+        confirmButtonText: 'Aceptar',
+        timer: 3000,
+        timerProgressBar: true
+      });
+    } catch (error) {
+      console.error('Error al procesar venta:', error);
+      showToast(error.message || 'Error al procesar la venta', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handleDollarConfirm({ dolar_recibido, cambio_pesos, tipo_cambio, monto_dolar }) {
+    try {
+      console.log('[POS] handleDollarConfirm', { dolar_recibido, cambio_pesos, tipo_cambio, monto_dolar });
+      if (processing) return;
+      setProcessing(true);
+
+      const saleData = {
+        items: items.map(item => ({
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          personalizaciones: item.personalizaciones,
+          precio_final: item.precio_final
+        })),
+        metodo_pago: 'dolar',
+        tipo_cambio,
+        dolar_recibido,
+        iva_rate: localStorage.getItem('iva_rate')
+      };
+
+      const sale = await createSale(saleData);
+      window.dispatchEvent(new Event('saleCreated'));
+      printTicket(sale, customerName);
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
+      clearOrder();
+      setCustomerName('');
+      setShowDollarModal(false);
+
+      Swal.fire({
+        title: '¡Venta Exitosa!',
+        text: `Venta procesada: ${formatCurrency(total)} MXN = $${monto_dolar.toFixed(2)} USD`,
+        icon: 'success',
+        confirmButtonText: 'Aceptar',
+        timer: 3000,
+        timerProgressBar: true
+      });
+    } catch (error) {
+      console.error('Error al procesar venta:', error);
+      showToast(error.message || 'Error al procesar la venta', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handleCardPayment(cardType) {
+    try {
+      if (!cashRegister) {
+        showToast('Debes abrir una caja antes de vender', 'error');
+        return;
+      }
+
+      setProcessing(true);
+      const saleData = {
+        items: items.map(item => ({
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          personalizaciones: item.personalizaciones,
+          precio_final: item.precio_final
+        })),
+        metodo_pago: 'tarjeta',
+        tipo_tarjeta: cardType,
+        iva_rate: localStorage.getItem('iva_rate')
+      };
+      const sale = await createSale(saleData);
+      window.dispatchEvent(new Event('saleCreated'));
+      printTicket(sale, customerName);
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
+      clearOrder();
+      setCustomerName('');
+      setShowCardTypeModal(false);
+
+      Swal.fire({
+        title: '¡Venta Exitosa!',
+        text: 'La venta se ha procesado correctamente.',
+        icon: 'success',
+        confirmButtonText: 'Aceptar',
+        timer: 3000,
+        timerProgressBar: true
+      });
+    } catch (error) {
+      console.error('Error al procesar venta:', error);
+      showToast('Error al procesar la venta', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handleMixedPayment(paymentData) {
+    try {
+      console.log('[POS] handleMixedPayment', paymentData);
+      if (!cashRegister) {
+        showToast('Debes abrir una caja antes de vender', 'error');
+        return;
+      }
+
+      setProcessing(true);
+
+      const saleData = {
+        items: items.map(item => ({
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          personalizaciones: item.personalizaciones,
+          precio_final: item.precio_final
+        })),
+        metodo_pago: 'mixto',
+        ...paymentData,
+        iva_rate: localStorage.getItem('iva_rate')
+      };
+
+      const sale = await createSale(saleData);
+      window.dispatchEvent(new Event('saleCreated'));
+      printTicket(sale, customerName);
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
+      clearOrder();
+      setCustomerName('');
+      setShowMixedPaymentModal(false);
+
       Swal.fire({
         title: '¡Venta Exitosa!',
         text: 'La venta se ha procesado correctamente.',
@@ -259,8 +503,12 @@ export default function POS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale);
+      printTicket(sale, customerName);
+      if (imprimirEtiquetas) {
+        printLabels(sale, customerName);
+      }
       clearOrder();
+      setCustomerName('');
       setShowCashModal(false);
 
       Swal.fire({
@@ -325,7 +573,6 @@ export default function POS() {
             )}
           </div>
           <div className="pos-header-right">
-            <BranchSelector />
             {/* Indicador accesible de estado */}
             <div aria-live="polite" style={{ fontSize: 12, opacity: 0.8 }}>
               {cashRegister ? 'Caja abierta' : 'Sin caja abierta'}
@@ -401,6 +648,17 @@ export default function POS() {
         <div className="order-panel">
           <h2 className="order-title">Orden Actual</h2>
           
+          <div className="customer-name-input" style={{ marginBottom: '15px' }}>
+            <input
+              type="text"
+              placeholder="Nombre del cliente (para etiqueta)"
+              className="form-input"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              style={{ width: '100%', padding: '10px', fontSize: '14px' }}
+            />
+          </div>
+          
           {items.length === 0 ? (
             <div className="order-empty">
               <p>No hay productos en la orden</p>
@@ -414,6 +672,7 @@ export default function POS() {
                     item={item}
                     onRemove={handleRemoveItem}
                     onUpdateQuantity={(id, qty) => updateQuantity(id, qty)}
+                    onEdit={handleEditItem}
                   />
                 ))}
               </div>
@@ -437,40 +696,91 @@ export default function POS() {
       </div>
 
       <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Seleccionar Método de Pago">
-        <div className="payment-methods">
+        <div className="payment-selection-modal">
           <button
-            className="payment-method"
+            className="payment-option-btn cash"
             onClick={() => handlePayment('efectivo')}
             disabled={processing}
           >
-            <DollarSign size={24} />
-            <span>Efectivo</span>
+            <DollarSign size={32} className="payment-option-icon" />
+            <span className="payment-option-label">Efectivo</span>
           </button>
           <button
-            className="payment-method"
+            className="payment-option-btn card"
             onClick={() => handlePayment('tarjeta')}
             disabled={processing}
           >
-            <CreditCard size={24} />
-            <span>Tarjeta</span>
+            <CreditCard size={32} className="payment-option-icon" />
+            <span className="payment-option-label">Tarjeta</span>
           </button>
           <button
-            className="payment-method"
+            className="payment-option-btn usd"
             onClick={() => handlePayment('usd')}
             disabled={processing}
             aria-label="Pagar en dólares"
           >
-            <DollarSign size={24} />
-            <span>USD</span>
+            <DollarSign size={32} className="payment-option-icon" />
+            <span className="payment-option-label">USD</span>
+          </button>
+          <button
+            className="payment-option-btn mixed"
+            onClick={() => {
+              setShowPaymentModal(false);
+              setShowMixedPaymentModal(true);
+            }}
+            disabled={processing}
+          >
+            <Smartphone size={32} className="payment-option-icon" />
+            <span className="payment-option-label">Pago Mixto</span>
           </button>
         </div>
       </Modal>
+
+      <Modal
+        isOpen={showCardTypeModal}
+        onClose={() => setShowCardTypeModal(false)}
+        title="Seleccionar Tipo de Tarjeta"
+      >
+        <div className="payment-methods">
+          <button className="payment-method" onClick={() => handleCardPayment('credito')} disabled={processing}>
+            <CreditCard size={24} />
+            <span>Tarjeta de Crédito</span>
+          </button>
+          <button className="payment-method" onClick={() => handleCardPayment('debito')} disabled={processing}>
+            <CreditCard size={24} />
+            <span>Tarjeta de Débito</span>
+          </button>
+        </div>
+      </Modal>
+
+      <MixedPaymentModal
+        isOpen={showCashModal}
+        onClose={() => setShowCashModal(false)}
+        total={total}
+        onConfirm={handleCashConfirm}
+      />
 
       <CashPaymentModal
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         total={total}
         onConfirm={handleCashConfirm}
+      />
+
+      <DollarPaymentModal
+        isOpen={showDollarModal}
+        onClose={() => setShowDollarModal(false)}
+        total={total}
+        tipoCambio={currentTipoCambio}
+        onConfirm={handleDollarConfirm}
+      />
+
+      <MixedPaymentModal
+        isOpen={showMixedPaymentModal}
+        onClose={() => setShowMixedPaymentModal(false)}
+        total={total}
+        tipoCambio={currentTipoCambio}
+        onConfirm={handleMixedPayment}
       />
 
       {toast && (
@@ -488,8 +798,11 @@ export default function POS() {
         onClose={() => {
           setShowCustomizationModal(false);
           setSelectedProduct(null);
+          setEditingItem(null);
         }}
         onConfirm={handleCustomizationConfirm}
+        existingCustomization={editingItem?.personalizaciones}
+        isEdit={!!editingItem}
       />
     </div>
   );

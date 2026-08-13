@@ -190,6 +190,12 @@
   border-color: var(--color-primary);
 }
 
+.action-icon-btn.close-btn:hover {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
 .corte-card-body {
   padding: 1.5rem;
 }

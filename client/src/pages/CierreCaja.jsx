@@ -78,8 +78,8 @@ export default function CierreCaja() {
         observaciones: formData.observaciones
       });
 
-      // Redirigir a la página de apertura de caja
-      navigate('/apertura-caja');
+      // Redirigir a la página de cortes de caja
+      navigate('/admin/cortes-caja');
     } catch (err) {
       setError(err.response?.data?.error || 'Error al cerrar la caja');
       setClosing(false);
@@ -105,7 +105,12 @@ export default function CierreCaja() {
         <p><strong>Fondo Inicial:</strong> ${formatCurrency(summary.fondo_inicial)}</p>
         <p><strong>Ventas Efectivo:</strong> ${formatCurrency(summary.ventas_efectivo)}</p>
         <p><strong>Ventas Tarjeta:</strong> ${formatCurrency(summary.ventas_tarjeta)}</p>
-        <p style="font-size: 1.2em; margin-top: 15px;"><strong>Total Vendido:</strong> ${formatCurrency(summary.ventas_efectivo + summary.ventas_tarjeta + summary.ventas_transferencia + summary.ventas_otros)}</p>
+        ${summary.ventas_dolar > 0 ? `
+        <p><strong>Ventas USD (incluidas en efectivo):</strong> ${formatCurrency(summary.ventas_dolar)}</p>
+        <p><strong>Total USD recibido:</strong> $${summary.total_dolar?.toFixed(2) || '0.00'} USD</p>` : ''}
+        <p><strong>Total Descuentos:</strong> ${formatCurrency(summary.total_descuentos)}</p>
+        <p><strong>Total Devoluciones:</strong> ${formatCurrency(summary.total_devoluciones)}</p>
+        <p style="font-size: 1.2em; margin-top: 15px;"><strong>Total Vendido:</strong> ${formatCurrency(summary.ventas_efectivo + summary.ventas_tarjeta)}</p>
         <hr style="margin: 20px 0;" />
         <p><strong>Total Esperado:</strong> ${formatCurrency(summary.total_esperado)}</p>
         <p><strong>Total Contado:</strong> ${formatCurrency(formData.total_contado || 0)}</p>
@@ -152,8 +157,8 @@ export default function CierreCaja() {
         <div className="error-container">
           <AlertTriangle size={48} />
           <p>{error || 'No se encontró la caja'}</p>
-          <button onClick={() => navigate('/')} className="back-button">
-            Volver al POS
+          <button onClick={() => navigate('/admin/cortes-caja')} className="back-button">
+            Volver a Cortes de Caja
           </button>
         </div>
       </div>
@@ -220,15 +225,19 @@ export default function CierreCaja() {
               <span className="summary-value">{formatCurrency(summary.ventas_tarjeta)}</span>
             </div>
 
-            <div className="summary-item">
-              <span className="summary-label">Ventas Transferencia</span>
-              <span className="summary-value">{formatCurrency(summary.ventas_transferencia)}</span>
-            </div>
+            {summary.ventas_dolar > 0 && (
+              <>
+                <div className="summary-item">
+                  <span className="summary-label">Ventas USD (incluidas en efectivo)</span>
+                  <span className="summary-value">{formatCurrency(summary.ventas_dolar)}</span>
+                </div>
 
-            <div className="summary-item">
-              <span className="summary-label">Otros Métodos</span>
-              <span className="summary-value">{formatCurrency(summary.ventas_otros)}</span>
-            </div>
+                <div className="summary-item">
+                  <span className="summary-label">Total USD recibido</span>
+                  <span className="summary-value">${summary.total_dolar?.toFixed(2) || '0.00'} USD</span>
+                </div>
+              </>
+            )}
 
             <div className="summary-item">
               <span className="summary-label">Total Descuentos</span>

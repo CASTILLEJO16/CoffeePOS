@@ -148,8 +148,8 @@ export async function closeCashRegister(req, res) {
     // Calcular totales de ventas
     const salesSummary = await cashRegisterService.getSalesSummaryByCashRegister(id);
 
-    // Calcular total esperado
-    const total_esperado = cashRegister.fondo_inicial + salesSummary.ventas_efectivo - salesSummary.total_devoluciones;
+    // Calcular total esperado (incluyendo descuentos)
+    const total_esperado = cashRegister.fondo_inicial + salesSummary.ventas_efectivo - salesSummary.total_descuentos - salesSummary.total_devoluciones;
 
     // Calcular diferencia
     const diferencia = total_contado - total_esperado;
@@ -202,8 +202,8 @@ export async function getCashRegisterSummary(req, res) {
       });
     }
 
-    // Verificar que la caja pertenezca al usuario
-    if (cashRegister.usuario_id !== userId) {
+    // Verificar que la caja pertenezca al usuario o que sea admin
+    if (req.user?.role !== 'admin' && cashRegister.usuario_id !== userId) {
       return res.status(403).json({
         success: false,
         error: 'No tienes permiso para ver esta caja'
@@ -213,8 +213,9 @@ export async function getCashRegisterSummary(req, res) {
     // Obtener resumen de ventas
     const salesSummary = await cashRegisterService.getSalesSummaryByCashRegister(id);
 
-    // Calcular total esperado
-    const total_esperado = cashRegister.fondo_inicial + salesSummary.ventas_efectivo - salesSummary.total_devoluciones;
+    // Calcular total esperado (incluyendo descuentos y devoluciones)
+    // ventas_dolar ya está incluido en ventas_efectivo
+    const total_esperado = (cashRegister.fondo_inicial || 0) + (salesSummary.ventas_efectivo || 0) - (salesSummary.total_descuentos || 0) - (salesSummary.total_devoluciones || 0);
 
     res.json({
       success: true,

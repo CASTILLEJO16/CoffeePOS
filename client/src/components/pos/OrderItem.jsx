@@ -2,7 +2,7 @@ import { X, Plus, Minus } from 'lucide-react';
 import './OrderItem.css';
 import { formatCurrency } from '../../utils/formatCurrency.js';
 
-export default function OrderItem({ item, onUpdateQuantity, onRemove }) {
+export default function OrderItem({ item, onUpdateQuantity, onRemove, onEdit }) {
   const hasCustomizations = item.personalizaciones && Object.keys(item.personalizaciones).length > 0;
   
   const getCustomizationText = () => {
@@ -61,9 +61,23 @@ export default function OrderItem({ item, onUpdateQuantity, onRemove }) {
           </button>
         </div>
         <div className="order-item-details">
-          <span className="order-item-name">{item.producto_nombre}</span>
+          <span 
+            className="order-item-name" 
+            style={{ cursor: 'pointer', textDecoration: 'underline' }}
+            onClick={() => onEdit && onEdit(item)}
+            title="Click para editar personalizaciones"
+          >
+            {item.producto_nombre}
+          </span>
           {customizationText && (
-            <span className="order-item-customization">{customizationText}</span>
+            <span 
+              className="order-item-customization"
+              style={{ cursor: 'pointer' }}
+              onClick={() => onEdit && onEdit(item)}
+              title="Click para editar personalizaciones"
+            >
+              {customizationText}
+            </span>
           )}
         </div>
       </div>

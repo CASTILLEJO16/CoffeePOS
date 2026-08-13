@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 import './AdminConfiguracion.css';
 
 export default function AdminConfiguracion() {
-  const [config, setConfig] = useState({ permitir_stock_negativo: '0' });
+  const [config, setConfig] = useState({ permitir_stock_negativo: '0', tipo_cambio_dolar: '20.00' });
   const [cajas, setCajas] = useState([]);
   const [cajasEnUso, setCajasEnUso] = useState(new Map()); // nombre -> { usuario, fecha }
   const [nuevaCaja, setNuevaCaja] = useState('');
@@ -152,6 +152,18 @@ export default function AdminConfiguracion() {
                 placeholder="Ej: 16"
               />
               <p className="help-text">Escribe 16 para 16%</p>
+            </div>
+            <div className="form-group">
+              <label>Tipo de Cambio Dólar (MXN)</label>
+              <input
+                type="number"
+                step="0.01"
+                className="form-input"
+                value={config.tipo_cambio_dolar !== undefined && config.tipo_cambio_dolar !== '' ? config.tipo_cambio_dolar : ''}
+                onChange={(e) => setConfig(prev => ({ ...prev, tipo_cambio_dolar: e.target.value }))}
+                placeholder="Ej: 20.00"
+              />
+              <p className="help-text">Tipo de cambio para pagos en dólares (1 USD = X MXN)</p>
             </div>
             <div className="form-group checkbox-group">
               <label className="checkbox-label">

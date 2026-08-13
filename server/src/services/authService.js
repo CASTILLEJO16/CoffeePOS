@@ -244,3 +244,28 @@ export async function getUserById(id) {
     throw error;
   }
 }
+
+/**
+ * Verifica la contraseña de un usuario
+ * @param {number} userId - ID del usuario
+ * @param {string} password - Contraseña a verificar
+ * @returns {boolean} True si la contraseña es correcta
+ */
+export async function verifyUserPassword(userId, password) {
+  try {
+    const user = await queryOne(
+      'SELECT contraseña_hash FROM usuarios WHERE id = ? AND activo = 1',
+      [userId]
+    );
+
+    if (!user) {
+      return false;
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.contraseña_hash);
+    return isValidPassword;
+  } catch (error) {
+    console.error('Error al verificar contraseña:', error);
+    return false;
+  }
+}

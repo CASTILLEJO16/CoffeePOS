@@ -196,3 +196,85 @@
   justify-content: flex-end;
   margin-top: 8px;
 }
+
+/* Bulk actions */
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-primary-light);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+}
+
+/* Select buttons */
+.select-all-btn,
+.select-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text-muted);
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.select-all-btn:hover,
+.select-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-primary);
+}
+
+.select-btn {
+  color: var(--color-text-muted);
+}
+
+.select-btn:hover {
+  color: var(--color-primary);
+}
+
+/* Discount cell */
+.discount-cell {
+  text-align: center;
+}
+
+.discount-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  border-radius: var(--border-radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.no-discount {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* Discount modal */
+.discount-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.discount-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.discount-modal .form-group label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}

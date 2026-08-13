@@ -83,3 +83,11 @@ export async function deleteProduct(id) {
   const response = await api.delete(`/productos/${id}`);
   return response.data;
 }
+
+/**
+ * Aplica descuento a un producto (admin)
+ */
+export async function applyProductDiscount(id, discountPercent) {
+  const response = await api.patch(`/productos/${id}/descuento`, { descuento: discountPercent });
+  return response.data;
+}

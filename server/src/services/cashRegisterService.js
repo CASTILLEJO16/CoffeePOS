@@ -113,7 +113,7 @@ export async function closeCashRegister(id, data) {
     if (caja.estado !== 'abierta') throw new Error('La caja ya está cerrada');
 
     const sales = await query(
-      `SELECT metodo_pago, SUM(total) as total
+      `SELECT metodo_pago, SUM(total) as total, SUM(monto_dolar) as monto_dolar
        FROM ventas
        WHERE caja_id = ? AND cancelada = 0
        GROUP BY metodo_pago`,
@@ -124,6 +124,8 @@ export async function closeCashRegister(id, data) {
     let ventas_tarjeta = 0;
     let ventas_transferencia = 0;
     let ventas_otros = 0;
+    let ventas_dolar = 0;
+    let total_dolar = 0;
 
     sales.forEach(sale => {
       switch (sale.metodo_pago?.toLowerCase()) {
@@ -132,15 +134,34 @@ export async function closeCashRegister(id, data) {
         case 'credito':
         case 'debito': ventas_tarjeta = sale.total || 0; break;
         case 'transferencia': ventas_transferencia = sale.total || 0; break;
+        case 'dolar':
+          ventas_dolar = sale.total || 0;
+          total_dolar = sale.monto_dolar || 0;
+          break;
         default: ventas_otros += sale.total || 0;
       }
     });
 
-    const total_descuentos = 0;
+    // Calcular total de descuentos desde los detalles de ventas
+    const discountDetails = await query(
+      `SELECT d.precio, d.cantidad, d.descuento
+       FROM detalle_ventas d
+       JOIN ventas v ON d.venta_id = v.id
+       WHERE v.caja_id = ? AND v.cancelada = 0 AND d.descuento > 0`,
+      [id]
+    );
+
+    let total_descuentos = 0;
+    discountDetails.forEach(detail => {
+      const discountAmount = detail.precio * (detail.descuento / 100) * detail.cantidad;
+      total_descuentos += discountAmount;
+    });
+    total_descuentos = Number(total_descuentos.toFixed(2));
+
     const total_devoluciones = 0;
 
     const total_esperado =
-      ventas_efectivo + ventas_tarjeta + ventas_transferencia + ventas_otros;
+      ventas_efectivo + ventas_tarjeta + ventas_transferencia + ventas_otros + ventas_dolar;
 
     const diferencia = Number((total_contado - total_esperado).toFixed(2));
 
@@ -153,6 +174,8 @@ export async function closeCashRegister(id, data) {
            ventas_tarjeta = ?,
            ventas_transferencia = ?,
            ventas_otros = ?,
+           ventas_dolar = ?,
+           total_dolar = ?,
            total_descuentos = ?,
            total_devoluciones = ?,
            total_esperado = ?,
@@ -167,6 +190,8 @@ export async function closeCashRegister(id, data) {
         ventas_tarjeta,
         ventas_transferencia,
         ventas_otros,
+        ventas_dolar,
+        total_dolar,
         total_descuentos,
         total_devoluciones,
         total_esperado,
@@ -210,6 +235,8 @@ export async function getSalesSummaryByCashRegister(cajaId) {
     let ventas_tarjeta = 0;
     let ventas_transferencia = 0;
     let ventas_otros = 0;
+    let ventas_dolar = 0;
+    let total_dolar = 0;
 
     salesByMethod.forEach(sale => {
       switch (sale.metodo_pago?.toLowerCase()) {
@@ -224,21 +251,56 @@ export async function getSalesSummaryByCashRegister(cajaId) {
         case 'transferencia':
           ventas_transferencia = sale.total || 0;
           break;
+        case 'usd':
+        case 'dolar':
+          // Las ventas en USD se suman al efectivo (en pesos)
+          ventas_efectivo += sale.total || 0;
+          ventas_dolar = sale.total || 0;
+          break;
         default:
           ventas_otros += sale.total || 0;
       }
     });
 
-    // Por ahora, descuentos y devoluciones en 0
-    // En una implementación más completa, se calcularían desde tablas específicas
-    const total_descuentos = 0;
-    const total_devoluciones = 0;
+    // Obtener el total en dólares (monto original en USD)
+    const dollarSales = await query(
+      `SELECT SUM(monto_dolar) as total_dolar
+       FROM ventas
+       WHERE caja_id = ? AND cancelada = 0 AND metodo_pago IN ('usd', 'dolar') AND branch_id = ?`,
+      [cajaId, branchId]
+    );
+    total_dolar = dollarSales[0]?.total_dolar || 0;
+
+    // Calcular total de descuentos desde los detalles de ventas
+    const discountDetails = await query(
+      `SELECT d.precio, d.cantidad, d.descuento
+       FROM detalle_ventas d
+       JOIN ventas v ON d.venta_id = v.id
+       WHERE v.caja_id = ? AND v.cancelada = 0 AND d.descuento > 0`,
+      [cajaId]
+    );
+
+    let total_descuentos = 0;
+    discountDetails.forEach(detail => {
+      const discountAmount = detail.precio * (detail.descuento / 100) * detail.cantidad;
+      total_descuentos += discountAmount;
+    });
+    total_descuentos = Number(total_descuentos.toFixed(2));
+
+    // Obtener total de devoluciones de la caja
+    const cashRegister = await queryOne(
+      'SELECT total_devoluciones FROM cajas WHERE id = ?',
+      [cajaId]
+    );
+    const total_devoluciones = cashRegister?.total_devoluciones || 0;
 
     return {
       ventas_efectivo,
       ventas_tarjeta,
       ventas_transferencia,
       ventas_otros,
+      ventas_dolar,
+      total_dolar,
       total_descuentos,
       total_devoluciones
     };

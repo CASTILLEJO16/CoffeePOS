@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAllCashRegisters } from '../services/cashRegisterService.js';
 import { formatCurrency, formatDate } from '../utils/formatCurrency.js';
 import { formatBusinessDateTime } from '../utils/dateTime.js';
@@ -13,11 +14,13 @@ import {
   Search,
   Download,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  X
 } from 'lucide-react';
 import './CortesCaja.css';
 
 export default function CortesCaja() {
+  const navigate = useNavigate();
   const [cortes, setCortes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -118,17 +121,18 @@ export default function CortesCaja() {
             <span>Ventas Tarjeta</span>
             <span>${formatCurrency(corte.ventas_tarjeta)}</span>
           </div>
+          ${corte.ventas_dolar > 0 ? `
           <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-            <span>Transferencias</span>
-            <span>${formatCurrency(corte.ventas_transferencia || 0)}</span>
+            <span>Ventas USD (incluidas en efectivo)</span>
+            <span>${formatCurrency(corte.ventas_dolar || 0)}</span>
           </div>
           <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-            <span>Otros</span>
-            <span>${formatCurrency(corte.ventas_otros || 0)}</span>
-          </div>
+            <span>Total USD recibido</span>
+            <span>$${corte.total_dolar?.toFixed(2) || '0.00'} USD</span>
+          </div>` : ''}
           <div style="display:flex; justify-content:space-between; font-weight:700; border-top:1px solid #ddd; padding-top:8px; margin-top:8px;">
             <span>Total Vendido</span>
-            <span>${formatCurrency(corte.ventas_efectivo + corte.ventas_tarjeta + (corte.ventas_transferencia||0) + (corte.ventas_otros||0))}</span>
+            <span>${formatCurrency(corte.ventas_efectivo + corte.ventas_tarjeta)}</span>
           </div>
         </div>
 
@@ -263,6 +267,15 @@ export default function CortesCaja() {
                     >
                       <Download size={18} />
                     </button>
+                    {corte.estado === 'abierta' && (
+                      <button
+                        className="action-icon-btn close-btn"
+                        onClick={() => navigate(`/admin/cierre-caja/${corte.id}`)}
+                        title="Cerrar Caja"
+                      >
+                        <X size={18} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -315,14 +328,26 @@ export default function CortesCaja() {
                       <span className="total-value">{formatCurrency(corte.ventas_tarjeta)}</span>
                     </div>
 
+                    {corte.ventas_dolar > 0 && (
+                      <>
+                        <div className="total-row">
+                          <span className="total-label">Ventas USD (incluidas en efectivo):</span>
+                          <span className="total-value">{formatCurrency(corte.ventas_dolar)}</span>
+                        </div>
+
+                        <div className="total-row">
+                          <span className="total-label">Total USD recibido:</span>
+                          <span className="total-value">${corte.total_dolar?.toFixed(2) || '0.00'} USD</span>
+                        </div>
+                      </>
+                    )}
+
                     <div className="total-row">
                       <span className="total-label">Total Vendido:</span>
                       <span className="total-value highlighted">
                         {formatCurrency(
                           corte.ventas_efectivo + 
-                          corte.ventas_tarjeta + 
-                          corte.ventas_transferencia + 
-                          corte.ventas_otros
+                          corte.ventas_tarjeta
                         )}
                       </span>
                     </div>

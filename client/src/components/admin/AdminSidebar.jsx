@@ -7,7 +7,6 @@ import './AdminSidebar.css';
 
 const menuItems = [
   { path: '/admin/pos',              icon: ShoppingCart, label: 'Punto de Venta' },
-  { path: '/admin/apertura-caja',    icon: Wallet, label: 'Apertura de Caja' },
   { path: '/admin',                  icon: Package, label: 'Productos',      exact: true },
   { path: '/admin/personalizaciones',icon: Settings, label: 'Personalizaciones' },
   { path: '/admin/usuarios',         icon: Users, label: 'Usuarios' },

@@ -247,6 +247,7 @@ async function migrateDatabase() {
 
   // Insertar configuración por defecto si no existe
   db.run(`INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('permitir_stock_negativo', '0')`);
+  db.run(`INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('tipo_cambio_dolar', '20.00')`);
   
   // Insertar caja por defecto si no existe ninguna
   db.get('SELECT COUNT(*) as count FROM cajas_nombres', [], (err, row) => {

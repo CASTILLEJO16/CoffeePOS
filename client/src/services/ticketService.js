@@ -8,9 +8,10 @@ import { formatBusinessDateTime } from '../utils/dateTime.js';
 /**
  * Genera un ticket en formato HTML para impresión
  * @param {Object} sale - Venta con detalles
+ * @param {string} customerName - Nombre del cliente (opcional)
  * @returns {string} HTML del ticket
  */
-export function generateTicketHTML(sale) {
+export function generateTicketHTML(sale, customerName = null) {
   const formatDate = (dateString) => formatBusinessDateTime(dateString);
 
   const formatCurrency = (value) => {
@@ -32,15 +33,28 @@ export function generateTicketHTML(sale) {
 
   const itemsHTML = sale.detalles.map(detail => {
     const extras = getCustomizationItems(detail.personalizaciones);
+    const hasDiscount = detail.descuento && detail.descuento > 0;
 
     // línea principal del producto
     let rows = `
     <tr class="ticket-item">
       <td class="ticket-qty">${detail.cantidad}</td>
-      <td class="ticket-name">${detail.producto_nombre || 'Producto'}</td>
+      <td class="ticket-name">${detail.producto_nombre || 'Producto'}${hasDiscount ? ` <span style="color: var(--color-warning); font-size: 0.8em;">(-${detail.descuento}%)</span>` : ''}</td>
       <td class="ticket-price">${formatCurrency(detail.precio)}</td>
       <td class="ticket-total">${formatCurrency(detail.precio * detail.cantidad)}</td>
     </tr>`;
+
+    // línea de descuento si aplica
+    if (hasDiscount) {
+      const discountAmount = detail.precio * (detail.descuento / 100) * detail.cantidad;
+      rows += `
+      <tr class="ticket-item">
+        <td></td>
+        <td class="ticket-name ticket-extra" style="color: var(--color-success);">Descuento</td>
+        <td class="ticket-price" style="color: var(--color-success);">-${detail.descuento}%</td>
+        <td class="ticket-total" style="color: var(--color-success);">-${formatCurrency(discountAmount)}</td>
+      </tr>`;
+    }
 
     // líneas separadas de extras
     let extrasTotal = 0;
@@ -227,11 +241,73 @@ export function generateTicketHTML(sale) {
             <span>Fecha:</span>
             <span>${formatDate(sale.fecha)}</span>
           </div>
+          ${customerName ? `
+          <div class="ticket-info-row">
+            <span>Cliente:</span>
+            <span>${customerName}</span>
+          </div>` : ''}
           <div class="ticket-info-row">
             <span>Método:</span>
             <span>${sale.metodo_pago.toUpperCase()}${sale.metodo_pago === 'tarjeta' && sale.tipo_tarjeta ? ` (${sale.tipo_tarjeta.toUpperCase()})` : ''}</span>
           </div>
         </div>
+
+        ${sale.metodo_pago === 'mixto' ? `
+        <div class="ticket-info" style="border-top: 1px dashed #000; padding-top: 5px; margin-top: 5px;">
+          <div style="font-weight: bold; margin-bottom: 3px;">Desglose de Pago:</div>
+          ${sale.efectivo_mxn > 0 ? `
+          <div class="ticket-info-row">
+            <span>Efectivo MXN:</span>
+            <span>${formatCurrency(sale.efectivo_mxn)}</span>
+          </div>` : ''}
+          ${sale.efectivo_usd > 0 ? `
+          <div class="ticket-info-row">
+            <span>Efectivo USD:</span>
+            <span>$${sale.efectivo_usd.toFixed(2)} USD</span>
+          </div>
+          <div class="ticket-info-row">
+            <span>  (= MXN):</span>
+            <span>${formatCurrency(sale.efectivo_usd * (sale.tipo_cambio || 20))}</span>
+          </div>` : ''}
+          ${sale.tarjeta_credito > 0 ? `
+          <div class="ticket-info-row">
+            <span>Tarjeta Crédito:</span>
+            <span>${formatCurrency(sale.tarjeta_credito)}</span>
+          </div>` : ''}
+          ${sale.tarjeta_debito > 0 ? `
+          <div class="ticket-info-row">
+            <span>Tarjeta Débito:</span>
+            <span>${formatCurrency(sale.tarjeta_debito)}</span>
+          </div>` : ''}
+          ${sale.tipo_cambio ? `
+          <div class="ticket-info-row" style="margin-top: 3px; border-top: 1px solid #000; padding-top: 3px;">
+            <span>Tipo de Cambio:</span>
+            <span>1 USD = $${sale.tipo_cambio.toFixed(2)}</span>
+          </div>` : ''}
+        </div>` : ''}
+
+        ${sale.metodo_pago === 'dolar' ? `
+        <div class="ticket-info" style="border-top: 1px dashed #000; padding-top: 5px; margin-top: 5px;">
+          <div class="ticket-info-row">
+            <span>Monto USD:</span>
+            <span>$${sale.monto_dolar ? sale.monto_dolar.toFixed(2) : '0.00'} USD</span>
+          </div>
+          ${sale.dolar_recibido ? `
+          <div class="ticket-info-row">
+            <span>Recibido USD:</span>
+            <span>$${sale.dolar_recibido.toFixed(2)} USD</span>
+          </div>` : ''}
+          ${sale.cambio_pesos !== null && sale.cambio_pesos !== undefined ? `
+          <div class="ticket-info-row">
+            <span>Cambio MXN:</span>
+            <span>${formatCurrency(sale.cambio_pesos)}</span>
+          </div>` : ''}
+          ${sale.tipo_cambio ? `
+          <div class="ticket-info-row" style="margin-top: 3px; border-top: 1px solid #000; padding-top: 3px;">
+            <span>Tipo de Cambio:</span>
+            <span>1 USD = $${sale.tipo_cambio.toFixed(2)}</span>
+          </div>` : ''}
+        </div>` : ''}
         
         <div class="ticket-items">
           <table>
@@ -262,6 +338,7 @@ export function generateTicketHTML(sale) {
             <span>TOTAL:</span>
             <span>${formatCurrency(sale.total)}</span>
           </div>
+          ${sale.metodo_pago !== 'mixto' && sale.metodo_pago !== 'dolar' ? `
           <div class="ticket-total-row">
             <span>Redondeo:</span>
             <span>${formatCurrency(diferenciaRedondeo)}</span>
@@ -277,7 +354,7 @@ export function generateTicketHTML(sale) {
           <div class="ticket-total-row">
             <span>Total USD (Redondeado):</span>
             <span>$${totalRedondeadoUSD.toFixed(2)} USD</span>
-          </div>
+          </div>` : ''}
         </div>
         
         <div class="ticket-footer">
@@ -357,9 +434,10 @@ function getCustomizationItems(personalizaciones) {
 /**
  * Imprime un ticket de venta
  * @param {Object} sale - Venta con detalles
+ * @param {string} customerName - Nombre del cliente (opcional)
  */
-export function printTicket(sale) {
-  const ticketHTML = generateTicketHTML(sale);
+export function printTicket(sale, customerName = null) {
+  const ticketHTML = generateTicketHTML(sale, customerName);
   
   const printWindow = window.open('', '_blank');
   if (printWindow) {

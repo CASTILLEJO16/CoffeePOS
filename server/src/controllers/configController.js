@@ -15,12 +15,15 @@ export async function getAllConfig(req, res) {
 
 export async function updateConfig(req, res) {
   try {
+    console.log('[ConfigController] Recibiendo configuración:', req.body);
     // aceptar ambos formatos:
     // 1) { configuraciones: { clave: valor } }
     // 2) { clave: valor }
     const configuraciones = req.body.configuraciones || req.body;
+    console.log('[ConfigController] Configuraciones a procesar:', configuraciones);
 
     for (const [clave, valor] of Object.entries(configuraciones)) {
+      console.log(`[ConfigController] Guardando ${clave} = ${valor}`);
       // Usar INSERT OR REPLACE (o ON CONFLICT UPDATE en sqlite si fuera el caso).
       // Como 'clave' es UNIQUE, podemos hacer:
       await run(
@@ -30,8 +33,10 @@ export async function updateConfig(req, res) {
       );
     }
     
+    console.log('[ConfigController] Configuración guardada exitosamente');
     res.json({ success: true });
   } catch (error) {
+    console.error('[ConfigController] Error guardando configuración:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 }
