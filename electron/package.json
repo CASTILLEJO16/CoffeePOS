@@ -1,6 +1,6 @@
 {
   "name": "coffe-pos-electron",
-  "version": "1.0.10",
+  "version": "1.0.13",
   "description": "CoffeePOS - Sistema de Punto de Venta para Cafeterías",
   "author": "CASTILLEJO16",
   "main": "main.js",
@@ -65,7 +65,7 @@
     "release": "npm version patch --no-git-tag-version && npm run dist:clean",
     "release:minor": "npm version minor --no-git-tag-version && npm run dist:clean",
     "release:major": "npm version major --no-git-tag-version && npm run dist:clean",
-    "publish:github": "electron-builder --publish always"
+    "publish:github": "npm run build:client && electron-builder --publish always"
   },
   "dependencies": {
     "concurrently": "^8.2.2",
