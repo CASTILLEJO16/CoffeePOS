@@ -7,7 +7,7 @@ import Button from '../common/Button.jsx';
 import Input from '../common/Input.jsx';
 import './ProductList.css';
 
-const SERVER_URL = 'http://localhost:3000';
+const SERVER_URL = 'http://localhost:3001';
 
 function getImageSrc(imagen) {
   if (!imagen) return null;
