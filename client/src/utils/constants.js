@@ -2,7 +2,7 @@
 const isElectron = typeof window !== 'undefined' && window.location.protocol === 'file:';
 
 export const API_BASE_URL = isElectron
-  ? 'http://localhost:3000/api'
+  ? 'http://localhost:3001/api'
   : '/api';
 
 export const DEFAULT_CATEGORIES = [
@@ -16,17 +16,48 @@ export const DEFAULT_CATEGORIES = [
 
 // Esta función se usará para cargar categorías dinámicamente
 export async function getCategories() {
+  const categoriesSet = new Set(['Todas', ...DEFAULT_CATEGORIES]);
+  
   try {
-    const response = await fetch(`${API_BASE_URL}/categorias`);
-    const data = await response.json();
-    if (data.success && data.data) {
-      return ['Todas', ...data.data.map(cat => cat.nombre)];
-    }
-    return DEFAULT_CATEGORIES;
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+
+    // 1. Cargar desde /api/categorias
+    try {
+      const res1 = await fetch(`${API_BASE_URL}/categorias`, { headers });
+      if (res1.ok) {
+        const data1 = await res1.json();
+        if (data1.success && Array.isArray(data1.data)) {
+          data1.data.forEach(c => {
+            const name = typeof c === 'string' ? c : c?.nombre;
+            if (name) categoriesSet.add(name);
+          });
+        }
+      }
+    } catch (e) {}
+
+    // 2. Cargar categorías de productos existentes /api/productos/categorias
+    try {
+      const res2 = await fetch(`${API_BASE_URL}/productos/categorias`, { headers });
+      if (res2.ok) {
+        const data2 = await res2.json();
+        if (data2.success && Array.isArray(data2.data)) {
+          data2.data.forEach(c => {
+            const name = typeof c === 'string' ? c : c?.nombre;
+            if (name) categoriesSet.add(name);
+          });
+        }
+      }
+    } catch (e) {}
+
   } catch (error) {
     console.error('Error al cargar categorías:', error);
-    return DEFAULT_CATEGORIES;
   }
+
+  return Array.from(categoriesSet);
 }
 
 export const PAYMENT_METHODS = [
