@@ -1,6 +1,6 @@
 {
   "name": "coffe-pos-electron",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "CoffeePOS - Sistema de Punto de Venta para Cafeterías",
   "author": "CASTILLEJO16",
   "main": "main.js",
@@ -28,7 +28,8 @@
       {
         "provider": "github",
         "owner": "CASTILLEJO16",
-        "repo": "CoffeePOS"
+        "repo": "CoffeePOS",
+        "releaseType": "release"
       }
     ],
     "win": {
