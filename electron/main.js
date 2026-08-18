@@ -56,7 +56,7 @@ function startBackend() {
     env: {
       ...process.env,
       ELECTRON_USER_DATA: app.getPath('userData'),
-      PORT: '3000',
+      PORT: '3001',
       ELECTRON_RUN_AS_NODE: '1'
     },
     stdio: 'inherit'
@@ -93,17 +93,18 @@ function createWindow() {
     }
   });
 
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-  } else {
-    waitForBackend(() => {
-      const indexPath = path.join(process.resourcesPath, 'client', 'dist', 'index.html');
-      const formattedPath = 'file://' + indexPath.replace(/\\/g, '/');
-      console.log('Loading UI from:', formattedPath);
-      mainWindow.loadURL(formattedPath);
+  // Always use built client for consistency
+  waitForBackend(() => {
+    const indexPath = isDev
+      ? path.join(__dirname, '../client/dist/index.html')
+      : path.join(process.resourcesPath, 'client', 'dist', 'index.html');
+    const formattedPath = 'file://' + indexPath.replace(/\\/g, '/');
+    console.log('Loading UI from:', formattedPath);
+    mainWindow.loadURL(formattedPath);
+    if (isDev) {
       mainWindow.webContents.openDevTools();
-    });
-  }
+    }
+  });
 }
 
 app.whenReady().then(() => {
