@@ -5,7 +5,7 @@ import { formatCurrency } from '../utils/formatCurrency.js';
 import { Coffee, Search, DollarSign, CreditCard, Smartphone, X, Sun, Moon, LogOut } from 'lucide-react';
 import { useOrder } from '../context/OrderContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
-import { getProducts } from '../services/productService.js';
+import { getProducts, getProductById } from '../services/productService.js';
 import api from '../services/api.js';
 import { createSale } from '../services/saleService.js';
 import { printTicket } from '../services/ticketService.js';
@@ -224,13 +224,27 @@ export default function POS() {
     setSelectedProduct(null);
   }
 
-  function handleEditItem(item) {
+  async function handleEditItem(item) {
     setEditingItem(item);
+
+    let fullProduct = products.find(p => String(p.id) === String(item.producto_id));
+
+    if (!fullProduct || !fullProduct.categoria) {
+      try {
+        fullProduct = await getProductById(item.producto_id);
+      } catch (e) {
+        try {
+          const allProducts = await getProducts('', '');
+          fullProduct = allProducts.find(p => String(p.id) === String(item.producto_id));
+        } catch (_) {}
+      }
+    }
+
     setSelectedProduct({
       id: item.producto_id,
       nombre: item.producto_nombre,
       precio: item.precio_base,
-      categoria: '', // Podríamos guardar esto en el item si es necesario
+      categoria: item.categoria || fullProduct?.categoria || '',
       descuento: item.descuento
     });
     setShowCustomizationModal(true);

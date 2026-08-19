@@ -148,8 +148,10 @@ export async function closeCashRegister(req, res) {
     // Calcular totales de ventas
     const salesSummary = await cashRegisterService.getSalesSummaryByCashRegister(id);
 
-    // Calcular total esperado (incluyendo descuentos)
-    const total_esperado = cashRegister.fondo_inicial + salesSummary.ventas_efectivo - salesSummary.total_descuentos - salesSummary.total_devoluciones;
+    // Total esperado = fondo inicial + ventas en efectivo.
+    // No incluye tarjeta/transferencia y descuentos/devoluciones ya están reflejados
+    // en los totales de las ventas (o excluidos al estar canceladas).
+    const total_esperado = (cashRegister.fondo_inicial || 0) + (salesSummary.ventas_efectivo || 0);
 
     // Calcular diferencia
     const diferencia = total_contado - total_esperado;
@@ -213,9 +215,10 @@ export async function getCashRegisterSummary(req, res) {
     // Obtener resumen de ventas
     const salesSummary = await cashRegisterService.getSalesSummaryByCashRegister(id);
 
-    // Calcular total esperado (incluyendo descuentos y devoluciones)
-    // ventas_dolar ya está incluido en ventas_efectivo
-    const total_esperado = (cashRegister.fondo_inicial || 0) + (salesSummary.ventas_efectivo || 0) - (salesSummary.total_descuentos || 0) - (salesSummary.total_devoluciones || 0);
+    // Total esperado = fondo inicial + ventas en efectivo.
+    // No incluye tarjeta/transferencia y descuentos/devoluciones ya están reflejados
+    // en los totales de las ventas (o excluidos al estar canceladas).
+    const total_esperado = (cashRegister.fondo_inicial || 0) + (salesSummary.ventas_efectivo || 0);
 
     res.json({
       success: true,

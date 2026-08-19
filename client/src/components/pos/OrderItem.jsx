@@ -11,28 +11,22 @@ export default function OrderItem({ item, onUpdateQuantity, onRemove, onEdit }) 
     const parts = [];
     const p = item.personalizaciones;
     
-    if (p.milkType && p.milkType.id !== 'entera') {
+    // Soporte para estructura dinámica { tipo: [ { id, name, ... } ] }
+    Object.values(p).forEach(selections => {
+      if (Array.isArray(selections)) {
+        selections.forEach(sel => {
+          if (sel && sel.name && sel.id !== 'none' && sel.id !== 'entera' && sel.id !== '50' && sel.id !== 'hot') {
+            parts.push(sel.name);
+          }
+        });
+      } else if (selections && selections.name && selections.id !== 'none' && selections.id !== 'entera' && selections.id !== '50' && selections.id !== 'hot') {
+        parts.push(selections.name);
+      }
+    });
+
+    // Soporte legacy por si acaso
+    if (p.milkType && p.milkType.name && p.milkType.id !== 'entera' && !parts.includes(p.milkType.name)) {
       parts.push(p.milkType.name);
-    }
-    
-    if (p.toppings && p.toppings.length > 0) {
-      parts.push(p.toppings.map(t => t.name).join(', '));
-    }
-    
-    if (p.coldFoam && p.coldFoam.id !== 'none') {
-      parts.push(p.coldFoam.name);
-    }
-    
-    if (p.syrup && p.syrup.id !== 'none') {
-      parts.push(p.syrup.name);
-    }
-    
-    if (p.sweetness && p.sweetness.id !== '50') {
-      parts.push(p.sweetness.name);
-    }
-    
-    if (p.teaOption && p.teaOption.id !== 'hot') {
-      parts.push(p.teaOption.name);
     }
     
     return parts.length > 0 ? parts.join(' • ') : null;

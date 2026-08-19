@@ -66,7 +66,8 @@ function orderReducer(state, action) {
             descuento: product.descuento || 0,
             cantidad: 1,
             importe: finalPrice,
-            personalizaciones: customization || {}
+            personalizaciones: customization || {},
+            categoria: product.categoria || ''
           }
         ];
       }

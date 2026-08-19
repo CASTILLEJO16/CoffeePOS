@@ -6,7 +6,7 @@ import { Search, Coffee, ShoppingCart, DollarSign, CreditCard, Smartphone, Sun, 
 import { useOrder } from '../context/OrderContext.jsx';
 import { useAdminOrder } from '../context/AdminOrderContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
-import { getProducts } from '../services/productService.js';
+import { getProducts, getProductById } from '../services/productService.js';
 import api from '../services/api.js';
 import { createSale } from '../services/saleService.js';
 import { printTicket } from '../services/ticketService.js';
@@ -55,13 +55,16 @@ export default function AdminPOS() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadCategories();
     loadProducts();
+  }, [searchTerm, selectedCategory]);
+
+  useEffect(() => {
+    loadCategories();
     loadCashRegister();
     loadTipoCambio();
     loadIVA();
     loadLabelConfig();
-  }, [searchTerm, selectedCategory]);
+  }, []);
 
   // Atajos de teclado (modo POS rápido)
   useEffect(() => {
@@ -204,13 +207,27 @@ export default function AdminPOS() {
     setSelectedProduct(null);
   }
 
-  function handleEditItem(item) {
+  async function handleEditItem(item) {
     setEditingItem(item);
+
+    let fullProduct = products.find(p => String(p.id) === String(item.producto_id));
+
+    if (!fullProduct || !fullProduct.categoria) {
+      try {
+        fullProduct = await getProductById(item.producto_id);
+      } catch (e) {
+        try {
+          const allProducts = await getProducts('', '');
+          fullProduct = allProducts.find(p => String(p.id) === String(item.producto_id));
+        } catch (_) {}
+      }
+    }
+
     setSelectedProduct({
       id: item.producto_id,
       nombre: item.producto_nombre,
       precio: item.precio_base,
-      categoria: '',
+      categoria: item.categoria || fullProduct?.categoria || '',
       descuento: item.descuento
     });
     setShowCustomizationModal(true);
