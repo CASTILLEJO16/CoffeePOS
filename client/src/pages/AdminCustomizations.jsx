@@ -3,6 +3,7 @@ import { Settings, Plus } from 'lucide-react';
 import { getCustomizations, createCustomization, updateCustomization, deleteCustomization } from '../services/customizationService.js';
 import Modal from '../components/common/Modal.jsx';
 import Button from '../components/common/Button.jsx';
+import Swal from 'sweetalert2';
 import './AdminCustomizations.css';
 
 export default function AdminCustomizations() {
@@ -79,14 +80,26 @@ export default function AdminCustomizations() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('¿Estás seguro de eliminar esta personalización?')) return;
-    
+    const result = await Swal.fire({
+      title: '¿Eliminar personalización?',
+      text: 'Esta acción no se puede deshacer',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await deleteCustomization(id);
       await loadCustomizations();
+      Swal.fire('Eliminado', 'Personalización eliminada correctamente', 'success');
     } catch (error) {
       console.error('Error al eliminar personalización:', error);
-      alert('Error al eliminar personalización');
+      Swal.fire('Error', 'Error al eliminar personalización', 'error');
     }
   }
 

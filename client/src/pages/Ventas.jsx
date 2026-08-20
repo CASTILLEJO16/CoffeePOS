@@ -4,6 +4,7 @@ import { formatCurrency, formatDate } from '../utils/formatCurrency.js';
 import { formatPaymentMethod } from '../utils/salesAnalytics.js';
 import Modal from '../components/common/Modal.jsx';
 import { RotateCcw } from 'lucide-react';
+import Swal from 'sweetalert2';
 import './Ventas.css';
 
 export default function Ventas() {
@@ -60,7 +61,20 @@ export default function Ventas() {
 
   async function handleRefund() {
     if (!ventaSeleccionada) return;
-    
+
+    const result = await Swal.fire({
+      title: '¿Confirmar devolución?',
+      text: `¿Estás seguro de devolver la venta #${ventaSeleccionada.id} por ${formatCurrency(ventaSeleccionada.total)}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, devolver',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     setActionLoading(true);
     setRefundError('');
 
@@ -68,8 +82,21 @@ export default function Ventas() {
       await refundSale(ventaSeleccionada.id, refundPassword, refundMotivo);
       handleCloseRefundModal();
       loadSales(); // Recargar ventas
+
+      await Swal.fire({
+        title: '¡Devolución Exitosa!',
+        text: 'La venta ha sido devuelta correctamente.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (err) {
       setRefundError(err.response?.data?.error || 'Error al procesar la devolución');
+      await Swal.fire({
+        title: 'Error',
+        text: err.response?.data?.error || 'Error al procesar la devolución',
+        icon: 'error'
+      });
     } finally {
       setActionLoading(false);
     }

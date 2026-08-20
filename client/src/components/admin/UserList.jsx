@@ -4,6 +4,7 @@ import { Edit, Power, PowerOff } from 'lucide-react';
 import { getUsers, activateUser, deactivateUser } from '../../services/authService.js';
 import Modal from '../common/Modal.jsx';
 import Button from '../common/Button.jsx';
+import Swal from 'sweetalert2';
 import './UserList.css';
 
 export default function UserList({ onEdit, onRefresh }) {
@@ -28,6 +29,19 @@ export default function UserList({ onEdit, onRefresh }) {
   }
 
   async function handleToggleActive(user) {
+    const result = await Swal.fire({
+      title: user.activo ? '¿Desactivar usuario?' : '¿Activar usuario?',
+      text: `¿Estás seguro de ${user.activo ? 'desactivar' : 'activar'} al usuario "${user.nombre}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, confirmar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       if (user.activo) {
         await deactivateUser(user.id);
@@ -35,9 +49,16 @@ export default function UserList({ onEdit, onRefresh }) {
         await activateUser(user.id);
       }
       loadUsers();
+      Swal.fire({
+        title: '¡Actualizado!',
+        text: `Usuario ${user.activo ? 'desactivado' : 'activado'} correctamente`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (error) {
       console.error('Error al cambiar estado del usuario:', error);
-      alert('Error al cambiar estado del usuario: ' + (error.response?.data?.error || error.message));
+      Swal.fire('Error', 'Error al cambiar estado del usuario: ' + (error.response?.data?.error || error.message), 'error');
     }
   }
 

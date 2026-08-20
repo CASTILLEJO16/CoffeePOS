@@ -88,6 +88,19 @@ export default function AdminConfiguracion() {
   }
 
   async function handleSaveConfig() {
+    const result = await Swal.fire({
+      title: '¿Guardar configuración?',
+      text: '¿Estás seguro de actualizar la configuración del sistema?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await updateConfig(config);
       Swal.fire({
@@ -98,6 +111,7 @@ export default function AdminConfiguracion() {
         showConfirmButton: false
       });
     } catch (error) {
+      console.error('[Configuracion] Error al guardar configuración:', error);
       Swal.fire('Error', 'No se pudo guardar la configuración', 'error');
     }
   }
@@ -105,6 +119,20 @@ export default function AdminConfiguracion() {
   async function handleAddCaja(e) {
     e.preventDefault();
     if (!nuevaCaja.trim()) return;
+
+    const result = await Swal.fire({
+      title: '¿Agregar caja?',
+      text: `¿Estás seguro de agregar la caja "${nuevaCaja}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, agregar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await createCashRegisterName(nuevaCaja);
       setNuevaCaja('');

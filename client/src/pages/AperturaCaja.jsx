@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { openCashRegister, getCashRegisterNames } from '../services/cashRegisterService.js';
 import { formatBusinessDate, formatBusinessTime } from '../utils/dateTime.js';
 import { Coffee, Clock, Calendar, User, DollarSign, FileText, Wallet } from 'lucide-react';
+import Swal from 'sweetalert2';
 import './AperturaCaja.css';
 
 export default function AperturaCaja() {
@@ -67,15 +68,38 @@ export default function AperturaCaja() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    const fondoInicial = parseFloat(formData.fondo_inicial) || 0;
+    const nombreCaja = formData.nombre_caja || `Caja ${user?.nombre}`;
+
+    const result = await Swal.fire({
+      title: '¿Abrir caja?',
+      text: `¿Estás seguro de abrir la caja "${nombreCaja}" con un fondo inicial de $${fondoInicial.toFixed(2)}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, abrir',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     setLoading(true);
 
     try {
-      const fondoInicial = parseFloat(formData.fondo_inicial) || 0;
-
       await openCashRegister({
-        nombre_caja: formData.nombre_caja || `Caja ${user?.nombre}`,
+        nombre_caja: nombreCaja,
         fondo_inicial: fondoInicial,
         observaciones: formData.observaciones
+      });
+
+      await Swal.fire({
+        title: '¡Caja Abierta!',
+        text: 'La caja ha sido abierta correctamente',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
       });
 
       navigate(destinoPostApertura, { replace: true });
@@ -90,6 +114,7 @@ export default function AperturaCaja() {
 
       setError(message);
       setLoading(false);
+      Swal.fire('Error', message, 'error');
     }
   }
 

@@ -19,6 +19,7 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 import './CierreCaja.css';
 
 export default function CierreCaja() {
@@ -68,14 +69,37 @@ export default function CierreCaja() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    const totalContado = parseFloat(formData.total_contado) || 0;
+    const diferencia = calculateDifference();
+
+    const result = await Swal.fire({
+      title: '¿Cerrar caja?',
+      text: `¿Estás seguro de cerrar la caja "${summary.nombre_caja}"?\n\nTotal contado: $${totalContado.toFixed(2)}\n${diferencia !== 0 ? `Diferencia: ${formatCurrency(diferencia)}\n` : ''}Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cerrar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     setClosing(true);
 
     try {
-      const totalContado = parseFloat(formData.total_contado) || 0;
-
       await closeCashRegister(id, {
         total_contado: totalContado,
         observaciones: formData.observaciones
+      });
+
+      await Swal.fire({
+        title: '¡Caja Cerrada!',
+        text: 'La caja ha sido cerrada correctamente',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
       });
 
       // Redirigir a la página de cortes de caja
@@ -83,6 +107,7 @@ export default function CierreCaja() {
     } catch (err) {
       setError(err.response?.data?.error || 'Error al cerrar la caja');
       setClosing(false);
+      Swal.fire('Error', err.response?.data?.error || 'Error al cerrar la caja', 'error');
     }
   }
 

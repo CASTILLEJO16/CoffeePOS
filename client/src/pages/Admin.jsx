@@ -5,6 +5,7 @@ import ProductList from '../components/admin/ProductList.jsx';
 import ProductForm from '../components/admin/ProductForm.jsx';
 import Modal from '../components/common/Modal.jsx';
 import Button from '../components/common/Button.jsx';
+import Swal from 'sweetalert2';
 import './Admin.css';
 
 export default function Admin() {
@@ -23,13 +24,28 @@ export default function Admin() {
   }
 
   async function handleProductSubmit(productData) {
+    const result = await Swal.fire({
+      title: editingProduct ? '¿Guardar cambios?' : '¿Crear producto?',
+      text: editingProduct
+        ? `¿Estás seguro de actualizar el producto "${productData.nombre}"?`
+        : `¿Estás seguro de crear el producto "${productData.nombre}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       // Construir FormData para incluir la imagen si existe
       const formData = new FormData();
       formData.append('nombre', productData.nombre);
       formData.append('precio', productData.precio);
       formData.append('categoria', productData.categoria);
-      
+
       // Solo enviar la imagen si se seleccionó una nueva
       if (productData.imageFile) {
         formData.append('imagen', productData.imageFile);
@@ -46,9 +62,17 @@ export default function Admin() {
       setShowProductModal(false);
       setEditingProduct(null);
       setRefreshKey(prev => prev + 1);
+
+      await Swal.fire({
+        title: '¡Guardado!',
+        text: editingProduct ? 'Producto actualizado correctamente' : 'Producto creado correctamente',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (error) {
       console.error('Error al guardar producto:', error);
-      alert('Error al guardar producto: ' + (error.response?.data?.error || error.message));
+      Swal.fire('Error', 'Error al guardar producto: ' + (error.response?.data?.error || error.message), 'error');
     }
   }
 

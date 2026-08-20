@@ -114,6 +114,20 @@ export default function AdminAlmacen() {
 
   async function handleAjusteStock(e) {
     e.preventDefault();
+
+    const result = await Swal.fire({
+      title: '¿Confirmar ajuste de stock?',
+      text: `¿Estás seguro de ${ajusteData.tipo === 'agregar' ? 'agregar' : 'establecer'} ${ajusteData.cantidad} ${currentIngrediente?.unidad_medida || 'unidades'} a ${currentIngrediente?.nombre}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, confirmar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await ajustarStock(currentIngrediente.id, ajusteData.cantidad, ajusteData.tipo);
       Swal.fire('Actualizado', 'Stock actualizado correctamente', 'success');
@@ -161,6 +175,19 @@ export default function AdminAlmacen() {
   }
 
   async function handleSaveReceta() {
+    const result = await Swal.fire({
+      title: '¿Guardar receta?',
+      text: `¿Estás seguro de guardar la receta para ${currentRecetaTarget?.nombre}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       const payload = recetaData.map(r => ({ ingrediente_id: r.ingrediente_id, cantidad: r.cantidad }));
       if (currentRecetaTarget.type === 'producto') {

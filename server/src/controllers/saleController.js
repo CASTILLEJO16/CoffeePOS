@@ -148,12 +148,33 @@ export async function refundSale(req, res) {
       });
     }
 
-    // Verificar la contraseña del usuario
-    const { verifyUserPassword } = await import('../services/authService.js');
-    const passwordValid = await verifyUserPassword(userId, password);
+    const { verifyUserPassword, queryOne } = await import('../services/authService.js');
+    let passwordValid = false;
+
+    // Si es admin, verifica su propia contraseña
+    if (role === 'admin') {
+      passwordValid = await verifyUserPassword(userId, password);
+    } else {
+      // Si es cajero/vendedor, debe ingresar la contraseña de un admin
+      // Buscar un usuario admin activo
+      const adminUser = await queryOne(
+        'SELECT id FROM usuarios WHERE rol = ? AND activo = 1 LIMIT 1',
+        ['admin']
+      );
+
+      if (!adminUser) {
+        return res.status(403).json({
+          success: false,
+          error: 'No hay administradores activos para autorizar la devolución'
+        });
+      }
+
+      // Verificar la contraseña del admin
+      passwordValid = await verifyUserPassword(adminUser.id, password);
+    }
 
     if (!passwordValid) {
-      return res.status(401).json({
+      return res.status(403).json({
         success: false,
         error: 'Contraseña incorrecta'
       });

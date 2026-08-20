@@ -1,4 +1,7 @@
 import { query, queryOne, run } from '../config/database.js';
+
+// Re-export queryOne for use in controllers
+export { queryOne };
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config.js';

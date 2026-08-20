@@ -5,6 +5,7 @@ import { getAllProducts, activateProduct, deactivateProduct, deleteProduct, appl
 import Modal from '../common/Modal.jsx';
 import Button from '../common/Button.jsx';
 import Input from '../common/Input.jsx';
+import Swal from 'sweetalert2';
 import './ProductList.css';
 
 const SERVER_URL = 'http://localhost:3001';
@@ -42,6 +43,19 @@ export default function ProductList({ onEdit, onRefresh }) {
   }
 
   async function handleToggleActive(product) {
+    const result = await Swal.fire({
+      title: product.activo ? '¿Desactivar producto?' : '¿Activar producto?',
+      text: `¿Estás seguro de ${product.activo ? 'desactivar' : 'activar'} el producto "${product.nombre}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, confirmar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       if (product.activo) {
         await deactivateProduct(product.id);
@@ -49,8 +63,16 @@ export default function ProductList({ onEdit, onRefresh }) {
         await activateProduct(product.id);
       }
       loadProducts();
+      Swal.fire({
+        title: '¡Actualizado!',
+        text: `Producto ${product.activo ? 'desactivado' : 'activado'} correctamente`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (error) {
       console.error('Error al cambiar estado:', error);
+      Swal.fire('Error', 'Error al cambiar estado del producto', 'error');
     }
   }
 
@@ -65,8 +87,10 @@ export default function ProductList({ onEdit, onRefresh }) {
       setShowDeleteModal(false);
       setProductToDelete(null);
       loadProducts();
+      Swal.fire('Eliminado', 'Producto eliminado correctamente', 'success');
     } catch (error) {
       console.error('Error al eliminar producto:', error);
+      Swal.fire('Error', 'Error al eliminar producto', 'error');
     }
   }
 
@@ -97,13 +121,26 @@ export default function ProductList({ onEdit, onRefresh }) {
   }
 
   async function handleApplyDiscount() {
-    try {
-      const percent = parseFloat(discountPercent);
-      if (isNaN(percent) || percent < 0 || percent > 100) {
-        alert('Por favor ingresa un porcentaje válido entre 0 y 100');
-        return;
-      }
+    const percent = parseFloat(discountPercent);
+    if (isNaN(percent) || percent < 0 || percent > 100) {
+      Swal.fire('Error', 'Por favor ingresa un porcentaje válido entre 0 y 100', 'error');
+      return;
+    }
 
+    const result = await Swal.fire({
+      title: '¿Aplicar descuento?',
+      text: `¿Estás seguro de aplicar un ${percent}% de descuento a ${selectedProducts.size} producto(s)?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, aplicar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
       for (const productId of selectedProducts) {
         await applyProductDiscount(productId, percent);
       }
@@ -111,9 +148,10 @@ export default function ProductList({ onEdit, onRefresh }) {
       setShowDiscountModal(false);
       setSelectedProducts(new Set());
       loadProducts();
+      Swal.fire('¡Aplicado!', 'Descuento aplicado correctamente', 'success');
     } catch (error) {
       console.error('Error al aplicar descuento:', error);
-      alert('Error al aplicar descuento');
+      Swal.fire('Error', 'Error al aplicar descuento', 'error');
     }
   }
 

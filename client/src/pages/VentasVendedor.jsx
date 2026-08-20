@@ -31,6 +31,7 @@ import { getSales, getSaleById, refundSale } from '../services/saleService.js';
 import { getOpenCashRegister } from '../services/cashRegisterService.js';
 import { printTicket } from '../services/ticketService.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
+import Swal from 'sweetalert2';
 import {
   formatBusinessDateTime,
   formatBusinessTime,
@@ -406,7 +407,20 @@ export default function VentasVendedor() {
 
   async function handleRefund() {
     if (!ventaSeleccionada) return;
-    
+
+    const result = await Swal.fire({
+      title: '¿Confirmar devolución?',
+      text: `¿Estás seguro de devolver la venta #${ventaSeleccionada.id} por ${formatCurrency(ventaSeleccionada.total)}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, devolver',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     setActionLoading(true);
     setRefundError('');
 
@@ -414,8 +428,21 @@ export default function VentasVendedor() {
       await refundSale(ventaSeleccionada.id, refundPassword, refundMotivo);
       handleCloseRefundModal();
       loadData(); // Recargar ventas
+
+      await Swal.fire({
+        title: '¡Devolución Exitosa!',
+        text: 'La venta ha sido devuelta correctamente.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (err) {
       setRefundError(err.response?.data?.error || 'Error al procesar la devolución');
+      await Swal.fire({
+        title: 'Error',
+        text: err.response?.data?.error || 'Error al procesar la devolución',
+        icon: 'error'
+      });
     } finally {
       setActionLoading(false);
     }
