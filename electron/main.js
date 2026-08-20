@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
@@ -89,7 +89,8 @@ function createWindow() {
     height: 800,
     webPreferences: {
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
@@ -106,6 +107,43 @@ function createWindow() {
     }
   });
 }
+
+// IPC Handler para impresión silenciosa
+ipcMain.handle('print-html', async (event, htmlContent) => {
+  try {
+    // Crear una ventana oculta temporal para imprimir
+    const printWindow = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
+    });
+
+    // Cargar el HTML en la ventana
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+
+    // Imprimir sin diálogo
+    printWindow.webContents.print({
+      silent: true,
+      printBackground: true
+    }, (success) => {
+      if (success) {
+        console.log('Impresión exitosa');
+      } else {
+        console.error('Error en la impresión');
+      }
+      // Cerrar la ventana después de imprimir
+      printWindow.close();
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error al imprimir:', error);
+    return { success: false, error: error.message };
+  }
+});
 
 app.whenReady().then(() => {
   setupFileLogger();

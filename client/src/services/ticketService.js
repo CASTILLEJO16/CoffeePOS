@@ -436,14 +436,35 @@ function getCustomizationItems(personalizaciones) {
  * @param {Object} sale - Venta con detalles
  * @param {string} customerName - Nombre del cliente (opcional)
  */
-export function printTicket(sale, customerName = null) {
+export async function printTicket(sale, customerName = null) {
   const ticketHTML = generateTicketHTML(sale, customerName);
-  
+
+  // Verificar si estamos en Electron
+  if (window.electronAPI && window.electronAPI.printHTML) {
+    try {
+      await window.electronAPI.printHTML(ticketHTML);
+      console.log('Ticket enviado a impresión en Electron');
+    } catch (error) {
+      console.error('Error al imprimir ticket en Electron:', error);
+      // Fallback a impresión web normal
+      printTicketWeb(ticketHTML);
+    }
+  } else {
+    // Fallback para navegadores web normales
+    printTicketWeb(ticketHTML);
+  }
+}
+
+/**
+ * Fallback para impresión web normal (fuera de Electron)
+ * @param {string} ticketHTML - HTML del ticket
+ */
+function printTicketWeb(ticketHTML) {
   const printWindow = window.open('', '_blank');
   if (printWindow) {
     printWindow.document.write(ticketHTML);
     printWindow.document.close();
-    
+
     printWindow.onload = function() {
       printWindow.print();
       printWindow.close();

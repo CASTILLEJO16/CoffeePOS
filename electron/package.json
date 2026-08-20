@@ -1,6 +1,6 @@
 {
   "name": "coffe-pos-electron",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "CoffeePOS - Sistema de Punto de Venta para Cafeterías",
   "author": "CASTILLEJO16",
   "main": "main.js",
@@ -10,6 +10,7 @@
     "productName": "CoffeePOS",
     "files": [
       "main.js",
+      "preload.js",
       "package.json",
       "../client/dist/**/*",
       "../server/**/*"

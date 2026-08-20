@@ -224,14 +224,35 @@ function getCustomizationDetails(personalizaciones) {
  * @param {string} customerName - Nombre del cliente
  * @param {number} orderId - ID de la orden
  */
-function printSingleLabel(detail, customerName, orderId) {
+async function printSingleLabel(detail, customerName, orderId) {
   const labelHTML = generateLabelHTML(detail, customerName, orderId);
-  
+
+  // Verificar si estamos en Electron
+  if (window.electronAPI && window.electronAPI.printHTML) {
+    try {
+      await window.electronAPI.printHTML(labelHTML);
+      console.log('Etiqueta enviada a impresión en Electron');
+    } catch (error) {
+      console.error('Error al imprimir etiqueta en Electron:', error);
+      // Fallback a impresión web normal
+      printLabelWeb(labelHTML);
+    }
+  } else {
+    // Fallback para navegadores web normales
+    printLabelWeb(labelHTML);
+  }
+}
+
+/**
+ * Fallback para impresión web normal (fuera de Electron)
+ * @param {string} labelHTML - HTML de la etiqueta
+ */
+function printLabelWeb(labelHTML) {
   const printWindow = window.open('', '_blank');
   if (printWindow) {
     printWindow.document.write(labelHTML);
     printWindow.document.close();
-    
+
     printWindow.onload = function() {
       printWindow.print();
       printWindow.close();

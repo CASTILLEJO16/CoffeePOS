@@ -17,5 +17,9 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    // Incluir archivos .d.ts en el build
+    assetsInclude: ['**/*.d.ts']
   }
 });

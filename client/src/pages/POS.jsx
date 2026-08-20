@@ -329,9 +329,9 @@ export default function POS() {
 
       // 🔥 Notificar a otras pantallas (ej: Ventas) que hay nueva venta
       window.dispatchEvent(new Event('saleCreated'));
-      
+
       // Imprimir ticket
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       
       // Imprimir etiquetas automáticamente si está activado
       if (imprimirEtiquetas) {
@@ -379,7 +379,7 @@ export default function POS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       if (imprimirEtiquetas) {
         printLabels(sale, customerName);
       }
@@ -424,7 +424,7 @@ export default function POS() {
       };
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       if (imprimirEtiquetas) {
         printLabels(sale, customerName);
       }
@@ -472,7 +472,7 @@ export default function POS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       if (imprimirEtiquetas) {
         printLabels(sale, customerName);
       }
@@ -517,7 +517,7 @@ export default function POS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       if (imprimirEtiquetas) {
         printLabels(sale, customerName);
       }

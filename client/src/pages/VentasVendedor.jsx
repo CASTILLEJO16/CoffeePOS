@@ -376,7 +376,7 @@ export default function VentasVendedor() {
     try {
       setActionLoading(true);
       const full = await getSaleById(venta.id);
-      printTicket(full || venta);
+      await printTicket(full || venta);
     } catch (err) {
       setError(err.response?.data?.error || 'No se pudo reimprimir el ticket');
     } finally {

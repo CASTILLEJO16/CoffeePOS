@@ -307,7 +307,7 @@ export default function AdminPOS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       if (imprimirEtiquetas) {
         printLabels(sale, customerName);
       }
@@ -352,7 +352,7 @@ export default function AdminPOS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       if (imprimirEtiquetas) {
         printLabels(sale, customerName);
       }
@@ -397,7 +397,7 @@ export default function AdminPOS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       if (imprimirEtiquetas) {
         printLabels(sale, customerName);
       }
@@ -442,7 +442,7 @@ export default function AdminPOS() {
       };
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       if (imprimirEtiquetas) {
         printLabels(sale, customerName);
       }
@@ -490,7 +490,7 @@ export default function AdminPOS() {
 
       const sale = await createSale(saleData);
       window.dispatchEvent(new Event('saleCreated'));
-      printTicket(sale, customerName);
+      await printTicket(sale, customerName);
       if (imprimirEtiquetas) {
         printLabels(sale, customerName);
       }
